@@ -140,7 +140,7 @@ function computerPrompt(idea, answers, depth) {
     !answers.target ? `先問我「${data.question}」` : '',
     !answers.os ? '若步驟依作業系統而異，先問我是 Windows、macOS 還是 Linux。' : '',
     data.instruction,
-    '請給我適合目前情況的具體步驟；資訊不足時先問關鍵問題，不要猜測我的檔案狀態。',
+    '請用繁體中文回答；不要猜測我的檔案狀態。',
     depth === 'detailed' ? '每一步註明預期看到的結果與失敗時的下一步。' : ''
   ].filter(Boolean);
   return lines.join('\n\n');
