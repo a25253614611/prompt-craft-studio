@@ -35,12 +35,12 @@ function renderQuestions(previous = {}) {
   const selected = selectedCategory();
   const values = { ...readAnswers(), ...previous };
   questions.replaceChildren();
-  const intro = document.createElement('p'); intro.className = 'questions-intro'; intro.textContent = selected === 'computer' ? '先選主要目的；其他資訊可補充，讓提示詞更貼近你的情況。' : '只補充會影響結果的資訊；不知道的部分可以留空。'; questions.append(intro);
+  const intro = document.createElement('p'); intro.className = 'questions-intro'; intro.textContent = selected === 'computer' ? '只問 3 件事：整理目的、具體困擾、作業系統。不確定的資訊可留空。' : '只問最影響結果的 3 件事；不知道的部分可留空。'; questions.append(intro);
   const activeQuestions = getQuestions(selected, values, idea.value);
   for (const q of activeQuestions) {
     const label = document.createElement('label'); label.textContent = q.label;
     const optional = document.createElement('span'); optional.className = 'question-optional'; optional.textContent = q.required ? '必填' : '可選填'; label.append(optional);
-    const input = document.createElement(q.options ? 'select' : q.id === 'context' || q.id === 'constraints' || q.id === 'protect' ? 'textarea' : 'input');
+    const input = document.createElement(q.options ? 'select' : q.id === 'context' || q.id === 'constraints' ? 'textarea' : 'input');
     if (input.tagName === 'INPUT') input.type = 'text';
     if (input.tagName === 'SELECT') {
       const blank = document.createElement('option'); blank.value = ''; blank.textContent = '請選擇'; input.append(blank);

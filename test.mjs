@@ -42,9 +42,22 @@ assert.match(composePrompt({ idea: '我想做一個記帳程式' }).text, /最�
 assert.match(composePrompt({ idea: '幫我修復 Python bug', answers: { symptom: '執行時出現 TypeError' } }).text, /定位原因/);
 
 const computerQuestions = getQuestions('computer', { intent: 'find' });
-assert.equal(computerQuestions[0].id, 'intent');
+assert.deepEqual(computerQuestions.map(q => q.id), ['intent', 'target', 'os']);
 assert.match(computerQuestions.find(q => q.id === 'target').label, /找什麼資料/);
 assert.match(getQuestions('computer', { intent: 'free_space' }).find(q => q.id === 'target').label, /空間不足/);
+assert.match(getQuestions('computer', {}, '我要整理我的電腦')[1].label, /具體的困擾/);
+for (const [category, idea, ids] of [
+  ['general', '我要整理我的房間', ['goal', 'context', 'constraints']],
+  ['computer', '我要整理我的電腦', ['intent', 'target', 'os']],
+  ['writing', '幫我寫一封信', ['goal', 'audience', 'context']],
+  ['learning', '我要學英文', ['goal', 'level', 'time']],
+  ['research', '分析問卷結果', ['goal', 'material', 'focus']],
+  ['coding', '我要一個程式', ['goal', 'platform', 'inputs']],
+  ['coding', '幫我修復 Python bug', ['symptom', 'expected', 'environment']],
+  ['creative', '設計一張海報', ['theme', 'usage', 'style']]
+]) {
+  assert.deepEqual(getQuestions(category, {}, idea).map(q => q.id), ids, `${category}: ${idea}`);
+}
 
 const find = composePrompt({ idea: '我要整理我的電腦', answers: { intent: 'find', target: '去年拍的照片', os: 'Windows' } });
 assert.equal(find.category, 'computer');
@@ -62,10 +75,11 @@ const unsure = composePrompt({ idea: '我要整理我的電腦', answers: { inte
 assert.match(unsure.text, /先幫我釐清/);
 assert.match(unsure.text, /確認目的前不要提出刪除或搬移建議/);
 
-const writing = composePrompt({ idea: '幫我寫邀請信', answers: { audience: '潛在合作夥伴', tone: '專業但親切', format: '電子郵件' } });
+const writing = composePrompt({ idea: '幫我寫邀請信', answers: { goal: '邀請對方參加發表會', audience: '潛在合作夥伴', context: '活動在週五舉行', tone: '專業但親切', format: '電子郵件' } });
 assert.equal(writing.category, 'writing');
 assert.match(writing.text, /潛在合作夥伴/);
-assert.match(writing.text, /電子郵件/);
+assert.match(writing.text, /週五舉行/);
+assert.doesNotMatch(writing.text, /專業但親切|電子郵件/);
 assert.doesNotMatch(writing.text, /專業協作者/);
 assert.doesNotMatch(writing.text, /成果是給誰看的/);
 

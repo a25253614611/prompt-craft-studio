@@ -43,46 +43,47 @@ const COMPUTER_INTENTS = {
     label: '還不確定',
     question: '目前最困擾你的現象是什麼？',
     placeholder: '例如：桌面很亂、硬碟快滿、找不到檔案',
-    instruction: '先用簡短問題幫我釐清是尋找資料、釋放空間、分類檔案、備份，還是改善速度；確認目的前不要提出刪除或搬移建議。'
+    instruction: '先問一個能區分尋找資料、釋放空間、分類檔案、備份或改善速度的關鍵問題；確認目的前不要提出刪除或搬移建議。'
   }
 };
 
-const COMMON_QUESTIONS = [
-  { id: 'goal', label: '你希望最後得到什麼結果？', placeholder: '例如：完成一封可寄出的信、找出問題原因' },
-  { id: 'context', label: '有哪些必要背景或素材？', placeholder: '只寫任務需要的資訊' },
-  { id: 'constraints', label: '有什麼限制或不能做的事？', placeholder: '例如：時間、字數、工具、風格限制' }
-];
-
 const CATEGORY_QUESTIONS = {
-  general: [{ id: 'format', label: '你希望結果怎麼呈現？', placeholder: '例如：清單、表格、步驟' }],
+  general: [
+    { id: 'goal', label: '你真正想達成什麼結果？', placeholder: '例如：找回檔案、騰出空間、完成一份報告' },
+    { id: 'context', label: '目前的情況是什麼？', placeholder: '只寫與任務有關的現況或素材' },
+    { id: 'constraints', label: '什麼限制會改變做法？', placeholder: '例如：期限、預算、不能更動的資料' }
+  ],
   writing: [
+    { id: 'goal', label: '這份內容要達成什麼目的？', placeholder: '例如：邀請合作、說明變更、爭取同意' },
     { id: 'audience', label: '內容要寫給誰？', placeholder: '例如：同事、客戶、學生' },
-    { id: 'tone', label: '希望什麼語氣？', placeholder: '例如：專業、親切、簡潔' },
-    { id: 'format', label: '要寫成什麼形式？', placeholder: '例如：電子郵件、貼文、報告' }
+    { id: 'context', label: '對方必須知道哪些事實？', placeholder: '例如：活動日期、合作內容、需要回覆的事項' }
   ],
   learning: [
+    { id: 'goal', label: '學完後你想能做到什麼？', placeholder: '例如：能日常對話、通過考試、獨立完成作品' },
     { id: 'level', label: '目前程度如何？', placeholder: '例如：完全新手、有基礎' },
     { id: 'time', label: '有多少學習時間？', placeholder: '例如：每天 30 分鐘，持續一週' }
   ],
   research: [
+    { id: 'goal', label: '分析結果要幫你做什麼決定？', placeholder: '例如：選擇方案、調整產品、提出建議' },
     { id: 'material', label: '有哪些資料或來源？', placeholder: '例如：問卷結果、網址、文件' },
     { id: 'focus', label: '最想釐清哪個問題？', placeholder: '例如：成因、差異、改善方向' }
   ],
   coding: [
+    { id: 'goal', label: '程式要替你完成什麼工作？', placeholder: '例如：自動整理下載資料夾' },
     { id: 'platform', label: '程式要在哪裡執行？', placeholder: '例如：Windows、手機、瀏覽器；不確定可留空' },
     { id: 'inputs', label: '程式要讀取什麼，產出什麼？', placeholder: '例如：讀取 CSV，輸出整理後的表格' }
   ],
   creative: [
     { id: 'theme', label: '作品的主題或要傳達的訊息是什麼？', placeholder: '例如：校園活動、產品上市' },
-    { id: 'style', label: '想要什麼風格？', placeholder: '例如：極簡、溫暖、復古' },
-    { id: 'usage', label: '成果會用在哪裡？', placeholder: '例如：社群貼文、簡報封面' }
+    { id: 'usage', label: '成果會用在哪裡？', placeholder: '例如：社群貼文、簡報封面' },
+    { id: 'style', label: '想要什麼風格？', placeholder: '例如：極簡、溫暖、復古' }
   ]
 };
 
 const CODING_FIX_QUESTIONS = [
-  { id: 'environment', label: '使用什麼語言或環境？', placeholder: '例如：Python 3.12、React' },
   { id: 'symptom', label: '錯誤訊息或目前行為是什麼？', placeholder: '貼上錯誤訊息與重現步驟' },
-  { id: 'expected', label: '你預期程式怎麼運作？', placeholder: '描述正確結果' }
+  { id: 'expected', label: '你預期程式怎麼運作？', placeholder: '描述正確結果' },
+  { id: 'environment', label: '使用什麼語言或環境？', placeholder: '例如：Python 3.12、React' }
 ];
 
 const compact = idea => idea.replace(/[\s，。？！!?：:、]/g, '');
@@ -138,18 +139,15 @@ export function inferComputerIntent(idea = '') {
 export function getQuestions(category = 'general', answers = {}, idea = '') {
   if (category === 'computer') {
     const intent = answers.intent || inferComputerIntent(idea);
-    const questions = [
+    return [
       { id: 'intent', label: '這次整理電腦，主要想達成什麼？', required: !inferComputerIntent(idea), options: Object.entries(COMPUTER_INTENTS).map(([value, data]) => ({ value, label: data.label })) },
+      { id: 'target', label: COMPUTER_INTENTS[intent]?.question || '目前最具體的困擾是什麼？', placeholder: COMPUTER_INTENTS[intent]?.placeholder || '例如：找不到照片、硬碟快滿、桌面很亂' },
       { id: 'os', label: '使用什麼作業系統？', options: ['Windows', 'macOS', 'Linux', '不確定'].map(value => ({ value, label: value })) }
     ];
-    if (COMPUTER_INTENTS[intent]) questions.push({ id: 'target', label: COMPUTER_INTENTS[intent].question, placeholder: COMPUTER_INTENTS[intent].placeholder });
-    questions.push({ id: 'context', label: '目前情況或試過哪些方法？', placeholder: '例如：找過下載資料夾、C 槽剩 5 GB' });
-    questions.push({ id: 'protect', label: '哪些資料不能動？', placeholder: '例如：工作文件、照片；不確定可留空' });
-    return questions;
   }
   const clarification = clarificationFor(category, idea);
   const specific = category === 'coding' && codingMode(idea) === 'fix' ? CODING_FIX_QUESTIONS : CATEGORY_QUESTIONS[category] || CATEGORY_QUESTIONS.general;
-  return [...COMMON_QUESTIONS, ...specific].map(q => q.id === clarification?.id ? { ...q, label: clarification.label, required: true } : q);
+  return specific.map(q => q.id === clarification?.id ? { ...q, label: clarification.label, required: true } : q);
 }
 
 const clean = value => String(value ?? '').trim();
@@ -165,10 +163,8 @@ function computerPrompt(idea, answers, depth) {
   }
   const data = COMPUTER_INTENTS[intent];
   const details = [
-    bullet('作業系統', answers.os),
     bullet('整理範圍或目標', answers.target),
-    bullet('目前情況', answers.context),
-    bullet('不能動的資料', answers.protect)
+    bullet('作業系統', answers.os)
   ].filter(Boolean);
   const lines = [
     intent === 'unknown' ? `請先幫我釐清「${idea}」的具體目的。` : `需求：${idea}\n主要目的：${data.label}`,
