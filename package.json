@@ -1,1 +1,1 @@
-{"private":true,"type":"module","scripts":{"test":"node test.mjs"}}
+{"private":true,"type":"module","scripts":{"build":"node build.mjs","test":"node test.mjs && node worker.test.mjs"}}

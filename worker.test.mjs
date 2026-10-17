@@ -1,0 +1,67 @@
+import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+
+const source = await readFile(new URL('dist/server/index.js', import.meta.url), 'utf8');
+assert.doesNotMatch(source, /test-secret/);
+const { default: worker } = await import('./dist/server/index.js');
+const url = 'https://prompt-craft-studio.example';
+const post = (path, body, headers = {}) => new Request(`${url}${path}`, {
+  method: 'POST',
+  headers: { 'content-type': 'application/json', origin: url, ...headers },
+  body: JSON.stringify(body)
+});
+const env = { GEMINI_API_KEY: 'test-secret' };
+
+assert.equal((await (await worker.fetch(new Request(`${url}/api/status`), {})).json()).configured, false);
+assert.equal((await (await worker.fetch(new Request(`${url}/api/status`), env)).json()).configured, true);
+assert.equal((await worker.fetch(post('/api/plan', { idea: '我要整理我的電腦' }), {})).status, 503);
+assert.equal((await worker.fetch(post('/api/plan', { idea: 'a' }), env)).status, 400);
+assert.equal((await worker.fetch(post('/api/plan', { idea: '我要整理我的電腦' }, { origin: 'https://other.example' }), env)).status, 403);
+
+let calls = 0;
+globalThis.fetch = async (_url, options) => {
+  calls += 1;
+  assert.equal(options.headers['x-goog-api-key'], 'test-secret');
+  const request = JSON.parse(options.body);
+  assert.ok(request.systemInstruction.parts[0].text.includes('第一性原則') || request.systemInstruction.parts[0].text.includes('繁體中文'));
+  if (calls === 1) return Response.json({
+    candidates: [{ content: { parts: [{ text: JSON.stringify({
+      understanding: '想整理電腦，但目的尚未確認。',
+      questions: [
+        { label: '想從哪裡開始？', options: ['資料夾', '硬碟'] },
+        { label: '使用什麼系統？', options: ['Windows', 'macOS'] },
+        { label: '具體困擾？', options: [] },
+        { label: '第四題不應出現', options: [] }
+      ]
+    }) }] } }], usageMetadata: { promptTokenCount: 100, candidatesTokenCount: 50, totalTokenCount: 150 }
+  });
+  if (calls === 2) return Response.json({
+    candidates: [{ content: { parts: [{ text: '請協助我整理電腦，目的是尋找去年照片。先依檔名、日期和可能位置搜尋；確認前不要刪除或移動資料。' }] } }],
+    usageMetadata: { promptTokenCount: 90, candidatesTokenCount: 80, totalTokenCount: 170 }
+  });
+  return Response.json({}, { status: 429 });
+};
+
+const planResponse = await worker.fetch(post('/api/plan', { idea: '我要整理我的電腦' }), env);
+assert.equal(planResponse.status, 200);
+const plan = await planResponse.json();
+assert.equal(plan.questions.length, 3);
+assert.match(plan.questions[0].label, /最想先達成/);
+assert.ok(plan.questions[0].options.includes('尋找資料'));
+assert.equal(plan.usage.totalTokens, 150);
+
+const generatedResponse = await worker.fetch(post('/api/generate', {
+  idea: '我要整理我的電腦', answers: [{ question: plan.questions[0].label, answer: '尋找資料' }]
+}), env);
+assert.equal(generatedResponse.status, 200);
+const generated = await generatedResponse.json();
+assert.match(generated.text, /尋找去年照片/);
+assert.equal(generated.usage.totalTokens, 170);
+assert.equal((await worker.fetch(post('/api/generate', { idea: '我要整理我的電腦' }), env)).status, 429);
+assert.equal(calls, 3);
+
+const homepage = await worker.fetch(new Request(url), env);
+assert.equal(homepage.status, 200);
+assert.match(await homepage.text(), /使用 Gemini 分析需求/);
+assert.equal((await worker.fetch(new Request(`${url}/app.js`), env)).status, 200);
+console.log('Worker API checks passed.');

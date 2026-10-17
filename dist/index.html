@@ -14,7 +14,7 @@
     <header class="site-header">
       <a class="brand" href="#top" aria-label="提示詞工坊，回到頂部"><span class="brand-mark" aria-hidden="true">✳</span><span>提示詞工坊<small>PROMPT STUDIO</small></span></a>
       <nav aria-label="主選單"><a href="#workbench">開始製作</a><a href="#how-it-works">使用方式</a><a href="#sources">設計依據</a></nav>
-      <span class="header-badge">無需登入 · 免費使用</span>
+      <span class="header-badge">Gemini AI · 本機備援</span>
     </header>
 
     <main id="top">
@@ -36,12 +36,12 @@
 
       <section class="steps" id="how-it-works" aria-label="使用方式">
         <div><span>01</span><strong>寫下簡短想法</strong><p>一句話也可以，不必先學提示詞框架。</p></div>
-        <div><span>02</span><strong>回答 3 個關鍵問題</strong><p>從目的出發，只補上會改變做法的資訊。</p></div>
+        <div><span>02</span><strong>回答必要的問題</strong><p>從目的出發，最多只問 3 題。</p></div>
         <div><span>03</span><strong>複製完整提示</strong><p>可編輯、下載，直接用於常見 AI 工具。</p></div>
       </section>
 
       <section class="workbench-section" id="workbench" aria-labelledby="workbench-title">
-        <div class="section-heading"><div><span class="section-kicker">WORKBENCH / 工作台</span><h2 id="workbench-title">把你的想法放進來</h2><p>從範例開始，或寫下自己的任務。</p></div><span class="section-note">你的內容只在此瀏覽器處理</span></div>
+        <div class="section-heading"><div><span class="section-kicker">WORKBENCH / 工作台</span><h2 id="workbench-title">把你的想法放進來</h2><p>從範例開始，或寫下自己的任務。</p></div><span class="section-note">可選 Gemini AI 或本機規則</span></div>
         <div class="workbench-grid">
           <div class="panel input-panel">
             <div class="panel-title"><span class="step-number">1</span><div><h3>簡短提示詞</h3><p>先描述你想讓 AI 做什麼</p></div></div>
@@ -56,10 +56,11 @@
               <label>任務類型<select id="category"><option value="auto">自動判斷</option><option value="general">一般任務</option><option value="computer">電腦整理</option><option value="writing">寫作與溝通</option><option value="learning">學習與教學</option><option value="research">研究與分析</option><option value="product">產品規劃與驗收</option><option value="coding">程式與產品</option><option value="creative">創意與圖像</option></select></label>
               <label>提示詞長度<select id="depth"><option value="balanced">標準 · 重點完整</option><option value="concise">精簡 · 快速使用</option><option value="detailed">詳細 · 更多規範</option></select></label>
             </div>
+            <div class="ai-mode"><label><input type="checkbox" id="use-ai" disabled> 使用 Gemini 分析需求 <span id="ai-state">檢查服務中…</span></label><p>AI 模式會將你的想法與回答傳送給 Google。使用免費額度時，內容可能用於改善服務；請勿輸入機密或個人資料，並在 AI Studio 確認專案為 Free tier。<a href="https://ai.google.dev/gemini-api/terms" target="_blank" rel="noopener noreferrer">資料使用說明 ↗</a></p></div>
             <div class="detected" id="detected" aria-live="polite">輸入想法後，會建議適合的任務類型。</div>
             <button class="secondary-button question-toggle" id="show-questions" type="button">查看補問 <span aria-hidden="true">↗</span></button>
             <div id="questions" class="questions" hidden></div>
-            <div class="action-row"><button class="primary-button" id="generate" type="button">產生完整提示詞 <span aria-hidden="true">✦</span></button><button class="text-button" id="reset" type="button">清除重來</button></div>
+            <div class="action-row"><button class="primary-button" id="generate" type="button">分析並產生提示詞 <span aria-hidden="true">✦</span></button><button class="text-button" id="reset" type="button">清除重來</button></div>
             <label class="history-optin"><input type="checkbox" id="save-history"> 在此瀏覽器保留最近使用紀錄</label>
           </div>
 
@@ -71,14 +72,14 @@
             <textarea id="result" class="result-editor" spellcheck="false" hidden></textarea>
             <div id="result-actions" class="result-actions" hidden><button class="primary-button copy-button" id="copy" type="button">複製提示詞</button><button class="secondary-button" id="download" type="button">下載 .md</button></div>
             <div id="missing-box" class="missing-box" hidden><strong>還可以補充</strong><ul id="missing-list"></ul></div>
-            <div class="output-footnote">提示詞依你提供的內容整理；未填資訊不會被當成既定事實。</div>
+            <div class="output-footnote">提示詞依你提供的內容整理；未填資訊不會被當成既定事實。使用 Gemini 時會顯示本次 API 呼叫與 token 用量。</div>
           </div>
         </div>
       </section>
 
       <section class="history-section" id="history-section" hidden><div class="section-heading small"><div><span class="section-kicker">RECENT / 最近使用</span><h2>繼續之前的想法</h2></div><button id="clear-history" class="text-button" type="button">清除紀錄</button></div><div id="history-list" class="history-list"></div><p class="history-note">紀錄僅儲存在這台裝置的瀏覽器。</p></section>
 
-      <section class="why-section" id="sources"><div class="why-heading"><span class="section-kicker">THE METHOD / 設計依據</span><h2>問對問題，<br>比堆疊形容詞更有用。</h2></div><div class="why-content"><p>從任務要達成的結果出發，再找出目前資訊與會改變做法的條件；依任務只問最關鍵的 3 題。產出會說明具體交付成果與可檢查的條件，避免只重述原文。這些設計參考了提示工程指南與開放社群範例；產出的文字由本頁規則組合，不會呼叫模型。</p><div class="source-links"><a href="https://learn.chatgpt.com/docs/prompting" target="_blank" rel="noopener noreferrer">OpenAI ChatGPT 提示詞指引 ↗</a><a href="https://developers.openai.com/api/docs/guides/prompt-engineering" target="_blank" rel="noopener noreferrer">OpenAI 提示工程指南 ↗</a><a href="https://cloud.google.com/vertex-ai/generative-ai/docs/learn/prompts/prompt-design-strategies" target="_blank" rel="noopener noreferrer">Google Cloud 提示設計 ↗</a><a href="https://github.com/langgptai/wonderful-prompts" target="_blank" rel="noopener noreferrer">LangGPT 範例集 ↗</a><a href="https://github.com/outlookcat/prompt" target="_blank" rel="noopener noreferrer">提示詞資源索引 ↗</a><a href="https://github.com/OpenWorkai/codex-token-saver" target="_blank" rel="noopener noreferrer">Codex token 建議 ↗</a></div></div></section>
+      <section class="why-section" id="sources"><div class="why-heading"><span class="section-kicker">THE METHOD / 設計依據</span><h2>問對問題，<br>比堆疊形容詞更有用。</h2></div><div class="why-content"><p>從任務要達成的結果出發，再找出會改變做法的資訊；只問最關鍵的 0 到 3 題。Gemini 模式用模型分析需求並產生具體提示詞；本機模式使用規則，無須傳送內容。產出會盡量說明交付成果與可檢查的條件，避免只重述原文。</p><div class="source-links"><a href="https://learn.chatgpt.com/docs/prompting" target="_blank" rel="noopener noreferrer">OpenAI ChatGPT 提示詞指引 ↗</a><a href="https://developers.openai.com/api/docs/guides/prompt-engineering" target="_blank" rel="noopener noreferrer">OpenAI 提示工程指南 ↗</a><a href="https://ai.google.dev/gemini-api/docs/pricing" target="_blank" rel="noopener noreferrer">Gemini 免費額度說明 ↗</a><a href="https://github.com/langgptai/wonderful-prompts" target="_blank" rel="noopener noreferrer">LangGPT 範例集 ↗</a><a href="https://github.com/outlookcat/prompt" target="_blank" rel="noopener noreferrer">提示詞資源索引 ↗</a><a href="https://github.com/OpenWorkai/codex-token-saver" target="_blank" rel="noopener noreferrer">Codex token 建議 ↗</a></div></div></section>
     </main>
     <footer><span>✳ 提示詞工坊</span><span>讓每個想法，都有清楚的起點。</span><a href="#top">回到頂部 ↑</a></footer>
   </div>
