@@ -36,7 +36,7 @@
 
       <section class="steps" id="how-it-works" aria-label="使用方式">
         <div><span>01</span><strong>寫下簡短想法</strong><p>一句話也可以，不必先學提示詞框架。</p></div>
-        <div><span>02</span><strong>回答關鍵問題</strong><p>依任務類型補上受眾、格式與限制。</p></div>
+        <div><span>02</span><strong>回答關鍵問題</strong><p>先確認真正的目的，再補上影響結果的資訊。</p></div>
         <div><span>03</span><strong>複製完整提示</strong><p>可編輯、下載，直接用於常見 AI 工具。</p></div>
       </section>
 
@@ -48,12 +48,12 @@
             <label class="field-label" for="idea">你的想法 <span class="required">必填</span></label>
             <textarea id="idea" rows="5" maxlength="4000" placeholder="例如：幫我寫一封給潛在合作夥伴的邀請信"></textarea>
             <div class="field-meta"><span id="idea-error" class="error" role="alert"></span><span id="char-count">0 / 4000</span></div>
-            <div class="examples"><span>試試看：</span><button class="example-chip" data-example="幫我寫一封給潛在合作夥伴的邀請信">合作邀請信</button><button class="example-chip" data-example="幫我規劃一週的 Python 入門學習計畫">學習計畫</button><button class="example-chip" data-example="幫我分析客戶問卷結果並提出改善建議">問卷分析</button></div>
+            <div class="examples"><span>試試看：</span><button class="example-chip" data-example="我要整理我的電腦">整理電腦</button><button class="example-chip" data-example="幫我寫一封給潛在合作夥伴的邀請信">合作邀請信</button><button class="example-chip" data-example="幫我規劃一週的 Python 入門學習計畫">學習計畫</button><button class="example-chip" data-example="幫我分析客戶問卷結果並提出改善建議">問卷分析</button></div>
 
             <div class="divider"></div>
             <div class="panel-title compact"><span class="step-number">2</span><div><h3>設定方向</h3><p>讓補問更貼近你的任務</p></div></div>
             <div class="settings-grid">
-              <label>任務類型<select id="category"><option value="auto">自動判斷</option><option value="general">一般任務</option><option value="writing">寫作與溝通</option><option value="learning">學習與教學</option><option value="research">研究與分析</option><option value="coding">程式與產品</option><option value="creative">創意與圖像</option></select></label>
+              <label>任務類型<select id="category"><option value="auto">自動判斷</option><option value="general">一般任務</option><option value="computer">電腦整理</option><option value="writing">寫作與溝通</option><option value="learning">學習與教學</option><option value="research">研究與分析</option><option value="coding">程式與產品</option><option value="creative">創意與圖像</option></select></label>
               <label>提示詞長度<select id="depth"><option value="balanced">標準 · 重點完整</option><option value="concise">精簡 · 快速使用</option><option value="detailed">詳細 · 更多規範</option></select></label>
             </div>
             <div class="detected" id="detected" aria-live="polite">輸入想法後，會建議適合的任務類型。</div>

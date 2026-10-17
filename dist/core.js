@@ -1,97 +1,188 @@
 export const CATEGORIES = {
-  general: { label: '一般任務', role: '一位能把需求轉成具體成果的專業協作者', action: '先確認任務與可用資訊，再直接完成要求。', specific: [
-    { id: 'reference', label: '有沒有可參考的資料或範例？', placeholder: '例如：既有文件、網址、想模仿的風格' },
-    { id: 'success', label: '怎樣才算完成得好？', placeholder: '例如：可直接交付、容易理解、包含具體步驟' }
-  ] },
-  writing: { label: '寫作與溝通', role: '一位重視受眾與表達效果的寫作編輯', action: '先釐清溝通目的，再寫出自然、具體且可直接使用的文字。', specific: [
-    { id: 'tone', label: '希望是什麼語氣？', placeholder: '例如：專業但親切、簡潔有說服力' },
-    { id: 'length', label: '希望多長？', placeholder: '例如：200 字內、3 段、1 頁' }
-  ] },
-  learning: { label: '學習與教學', role: '一位擅長循序漸進教學的導師', action: '依學習者程度安排內容，從核心概念到練習與檢核。', specific: [
-    { id: 'level', label: '目前的程度與已知基礎？', placeholder: '例如：完全新手、會基本語法' },
-    { id: 'time', label: '可用時間或學習期限？', placeholder: '例如：每天 30 分鐘、兩週' }
-  ] },
-  research: { label: '研究與分析', role: '一位重視證據與推論界線的研究分析師', action: '區分事實、推論與未知，依資料提出有根據的分析。', specific: [
-    { id: 'scope', label: '分析範圍與時間區間？', placeholder: '例如：台灣市場、近三年、只分析問卷' },
-    { id: 'evidence', label: '需要哪些證據或引用方式？', placeholder: '例如：附來源連結、使用我提供的資料' }
-  ] },
-  coding: { label: '程式與產品', role: '一位重視可維護性與驗證的軟體工程師', action: '先理解現有環境與需求，再提出可實作的方案並驗證關鍵行為。', specific: [
-    { id: 'stack', label: '使用什麼技術或執行環境？', placeholder: '例如：Python 3.12、React、Windows' },
-    { id: 'acceptance', label: '完成條件或需處理的邊界情況？', placeholder: '例如：支援手機、處理空輸入、附測試' }
-  ] },
-  creative: { label: '創意與圖像', role: '一位能將抽象想法轉成具體創作規格的創意總監', action: '明確描述主題、風格、構圖與用途，保留創作空間。', specific: [
-    { id: 'style', label: '想要的風格或參考方向？', placeholder: '例如：溫暖插畫、極簡科技感' },
-    { id: 'medium', label: '作品媒介、尺寸或使用情境？', placeholder: '例如：社群貼文 1:1、網站橫幅' }
-  ] }
+  general: { label: '一般任務' },
+  computer: { label: '電腦整理' },
+  writing: { label: '寫作與溝通' },
+  learning: { label: '學習與教學' },
+  research: { label: '研究與分析' },
+  coding: { label: '程式與產品' },
+  creative: { label: '創意與圖像' }
 };
 
-export const COMMON_QUESTIONS = [
-  { id: 'audience', label: '成果是給誰看的或用的？', placeholder: '例如：第一次接觸這個主題的客戶' },
-  { id: 'context', label: '有哪些背景資訊一定要知道？', placeholder: '例如：目前情況、已有資料、使用場景' },
-  { id: 'format', label: '想要什麼輸出形式？', placeholder: '例如：條列清單、表格、郵件、步驟教學' },
-  { id: 'constraints', label: '有哪些限制或一定要避開的事？', placeholder: '例如：預算、字數、用詞、不能編造資料' }
+const COMPUTER_INTENTS = {
+  find: {
+    label: '尋找資料',
+    question: '你想找什麼資料？',
+    placeholder: '例如：去年拍的照片、某份 Word 文件',
+    instruction: '先依檔名、類型、日期與可能位置縮小搜尋範圍；提供可照做的搜尋步驟。找不到時再提出下一步。不要建議刪除檔案。'
+  },
+  free_space: {
+    label: '釋放空間',
+    question: '哪個磁碟或資料夾空間不足？',
+    placeholder: '例如：C 槽剩 5 GB；不確定也可以留空',
+    instruction: '先教我查看空間使用情況，再按風險列出可清理項目。任何刪除、解除安裝或清空資源回收筒的動作，都要先說明影響並徵得我確認。'
+  },
+  organize: {
+    label: '分類檔案',
+    question: '你要整理哪裡的檔案？',
+    placeholder: '例如：下載資料夾、桌面、照片',
+    instruction: '先盤點檔案與現有分類，再提出簡單的資料夾結構和搬移順序。執行前列出會移動或更名的項目，避免覆蓋與遺失。'
+  },
+  performance: {
+    label: '改善速度',
+    question: '哪種情況下電腦變慢？',
+    placeholder: '例如：開機慢、瀏覽器卡頓',
+    instruction: '先協助判斷瓶頸與可觀察的症狀，再依診斷結果建議改善步驟；不要把刪檔當成預設解法。'
+  },
+  backup: {
+    label: '備份或搬移',
+    question: '你要備份或搬移哪些資料？目的地在哪裡？',
+    placeholder: '例如：把照片備份到外接硬碟',
+    instruction: '先規劃來源、目的地與備份方式。完成後教我核對檔案數量與抽查內容；在驗證成功前保留原始資料。'
+  },
+  unknown: {
+    label: '還不確定',
+    question: '目前最困擾你的現象是什麼？',
+    placeholder: '例如：桌面很亂、硬碟快滿、找不到檔案',
+    instruction: '先用簡短問題幫我釐清是尋找資料、釋放空間、分類檔案、備份，還是改善速度；確認目的前不要提出刪除或搬移建議。'
+  }
+};
+
+const COMMON_QUESTIONS = [
+  { id: 'goal', label: '你希望最後得到什麼結果？', placeholder: '例如：完成一封可寄出的信、找出問題原因' },
+  { id: 'context', label: '有哪些必要背景或素材？', placeholder: '只寫任務需要的資訊' },
+  { id: 'constraints', label: '有什麼限制或不能做的事？', placeholder: '例如：時間、字數、工具、風格限制' }
 ];
 
-const RULES = [
-  ['learning', /學習|教學|課程|讀書|解釋|說明|理解|練習|考試|複習|入門|lesson|learn|teach|study/i],
-  ['coding', /程式|程式碼|網站|網頁|app|軟體|系統|api|bug|除錯|修復|開發|code|coding|python|javascript|react|資料庫|功能|前端|後端/i],
-  ['research', /研究|分析|比較|調查|問卷|報告|數據|市場|文獻|趨勢|research|analy[sz]|survey|data/i],
-  ['writing', /寫|撰|文案|郵件|信|文章|簡報稿|社群貼文|履歷|翻譯|改寫|潤飾|故事|write|email|copywriting|blog/i],
-  ['creative', /圖片|圖像|插畫|海報|設計|角色|logo|視覺|動畫|影片|攝影|畫|image|illustrat|poster|visual/i]
-];
+const CATEGORY_QUESTIONS = {
+  general: [{ id: 'format', label: '你希望結果怎麼呈現？', placeholder: '例如：清單、表格、步驟' }],
+  writing: [
+    { id: 'audience', label: '內容要寫給誰？', placeholder: '例如：同事、客戶、學生' },
+    { id: 'tone', label: '希望什麼語氣？', placeholder: '例如：專業、親切、簡潔' },
+    { id: 'format', label: '要寫成什麼形式？', placeholder: '例如：電子郵件、貼文、報告' }
+  ],
+  learning: [
+    { id: 'level', label: '目前程度如何？', placeholder: '例如：完全新手、有基礎' },
+    { id: 'time', label: '有多少學習時間？', placeholder: '例如：每天 30 分鐘，持續一週' }
+  ],
+  research: [
+    { id: 'material', label: '有哪些資料或來源？', placeholder: '例如：問卷結果、網址、文件' },
+    { id: 'focus', label: '最想釐清哪個問題？', placeholder: '例如：成因、差異、改善方向' }
+  ],
+  coding: [
+    { id: 'environment', label: '使用什麼語言或環境？', placeholder: '例如：Python 3.12、React' },
+    { id: 'symptom', label: '目前遇到什麼問題？', placeholder: '錯誤訊息、重現步驟或預期行為' }
+  ],
+  creative: [
+    { id: 'style', label: '想要什麼風格？', placeholder: '例如：極簡、溫暖、復古' },
+    { id: 'usage', label: '成果會用在哪裡？', placeholder: '例如：社群貼文、簡報封面' }
+  ]
+};
 
-export function inferCategory(idea) {
-  const text = String(idea || '').trim();
-  if (!text) return 'general';
-  for (const [category, pattern] of RULES) if (pattern.test(text)) return category;
+export function inferCategory(idea = '') {
+  if (/電腦|硬碟|磁碟|桌面|資料夾|檔案|文件整理|備份|垃圾檔案|儲存空間/.test(idea) && /整理|清理|清除|刪除|尋找|搜尋|找|空間|容量|備份|搬移|移動|變慢|速度/.test(idea)) return 'computer';
+  if (/學習|教學|入門|讀書|課程|複習|練習計畫/.test(idea)) return 'learning';
+  if (/程式|網站|APP|bug|除錯|開發|程式碼|Python|JavaScript|React/.test(idea)) return 'coding';
+  if (/研究|分析|數據|問卷|資料集|比較|調查/.test(idea)) return 'research';
+  if (/寫|文案|信|文章|貼文|簡報稿|翻譯|改寫/.test(idea)) return 'writing';
+  if (/設計|海報|圖片|插畫|創意|故事/.test(idea)) return 'creative';
   return 'general';
 }
 
-export function getQuestions(category) {
-  const selected = CATEGORIES[category] ? category : 'general';
-  return [...COMMON_QUESTIONS, ...CATEGORIES[selected].specific];
+export function inferComputerIntent(idea = '') {
+  if (/找不到|尋找|搜尋|找.{0,8}(檔案|資料|文件|照片)/.test(idea)) return 'find';
+  if (/空間不足|容量不足|釋放空間|清理空間|磁碟已滿|硬碟已滿|刪除.{0,8}(檔案|資料)|清掉.{0,8}(檔案|資料)/.test(idea)) return 'free_space';
+  if (/備份|轉移資料|搬到.{0,8}(硬碟|電腦)/.test(idea)) return 'backup';
+  if (/變慢|速度|卡頓|開機慢/.test(idea)) return 'performance';
+  if (/分類|歸檔|整理.{0,8}(檔案|文件|照片|資料夾)/.test(idea)) return 'organize';
+  return '';
 }
 
-function clean(value, max = 1000) { return String(value ?? '').trim().slice(0, max); }
+export function getQuestions(category = 'general', answers = {}, idea = '') {
+  if (category === 'computer') {
+    const intent = answers.intent || inferComputerIntent(idea);
+    const questions = [
+      { id: 'intent', label: '這次整理電腦，主要想達成什麼？', required: !inferComputerIntent(idea), options: Object.entries(COMPUTER_INTENTS).map(([value, data]) => ({ value, label: data.label })) },
+      { id: 'os', label: '使用什麼作業系統？', options: ['Windows', 'macOS', 'Linux', '不確定'].map(value => ({ value, label: value })) }
+    ];
+    if (COMPUTER_INTENTS[intent]) questions.push({ id: 'target', label: COMPUTER_INTENTS[intent].question, placeholder: COMPUTER_INTENTS[intent].placeholder });
+    questions.push({ id: 'context', label: '目前情況或試過哪些方法？', placeholder: '例如：找過下載資料夾、C 槽剩 5 GB' });
+    questions.push({ id: 'protect', label: '哪些資料不能動？', placeholder: '例如：工作文件、照片；不確定可留空' });
+    return questions;
+  }
+  return [
+    ...COMMON_QUESTIONS.map(q => q.id === 'goal' && category === 'general' && needsGoal(idea) ? { ...q, required: true } : q),
+    ...(CATEGORY_QUESTIONS[category] || CATEGORY_QUESTIONS.general)
+  ];
+}
+
+const clean = value => String(value ?? '').trim();
+const bullet = (label, value) => value ? `- ${label}：${value}` : '';
+const needsGoal = idea => /整理|處理|改善|優化|管理|幫我做/.test(idea);
+
+function computerPrompt(idea, answers, depth) {
+  const intent = answers.intent || inferComputerIntent(idea);
+  if (!COMPUTER_INTENTS[intent]) {
+    const error = new Error('先選擇這次整理電腦的主要目的，再產生提示詞。');
+    error.code = 'CLARIFICATION_REQUIRED';
+    error.questionId = 'intent';
+    throw error;
+  }
+  const data = COMPUTER_INTENTS[intent];
+  const details = [
+    bullet('作業系統', answers.os),
+    bullet('整理範圍或目標', answers.target),
+    bullet('目前情況', answers.context),
+    bullet('不能動的資料', answers.protect)
+  ].filter(Boolean);
+  const lines = [
+    intent === 'unknown' ? `請先幫我釐清「${idea}」的具體目的。` : `需求：${idea}\n主要目的：${data.label}`,
+    details.length ? `已知資訊：\n${details.join('\n')}` : '',
+    !answers.target ? `先問我「${data.question}」` : '',
+    !answers.os ? '若步驟依作業系統而異，先問我是 Windows、macOS 還是 Linux。' : '',
+    data.instruction,
+    '請給我適合目前情況的具體步驟；資訊不足時先問關鍵問題，不要猜測我的檔案狀態。',
+    depth === 'detailed' ? '每一步註明預期看到的結果與失敗時的下一步。' : ''
+  ].filter(Boolean);
+  return lines.join('\n\n');
+}
+
+function generalPrompt(idea, category, answers, depth) {
+  const labels = { goal: '目標成果', context: '背景與素材', constraints: '限制', audience: '對象', tone: '語氣', format: '形式', level: '目前程度', time: '可用時間', material: '資料來源', focus: '分析重點', environment: '技術環境', symptom: '問題與預期', style: '風格', usage: '用途' };
+  const fields = getQuestions(category).filter(q => clean(answers[q.id])).map(q => bullet(labels[q.id] || q.label, clean(answers[q.id])));
+  const lines = [`請協助我完成這件事：${idea}`];
+  if (fields.length) lines.push(`補充資訊：\n${fields.join('\n')}`);
+  const method = {
+    writing: '依目標與對象寫出可直接使用的內容；若缺少會改變內容方向的資訊，先問我。',
+    learning: '依目前程度與可用時間安排可執行的學習步驟，附上練習與檢查進度的方法。',
+    research: '先說明分析依據，再整理發現、限制與可行建議；資料不足時不要編造結果。',
+    coding: '先確認問題與環境，再給可執行的修改和驗證方法；缺少錯誤資訊時先問我。',
+    creative: '依用途與風格產出可實作的方案，描述關鍵元素與構圖。',
+    general: '先釐清目標，再提供可執行的結果或步驟。'
+  };
+  lines.push(method[category] || method.general);
+  if (depth === 'detailed') lines.push('包含必要的檢查方式與可能限制。');
+  if (depth !== 'concise') lines.push('請使用繁體中文，內容清楚精簡。');
+  return lines.join('\n\n');
+}
 
 export function composePrompt({ idea, category = 'auto', depth = 'balanced', answers = {} }) {
-  const task = clean(idea, 4000);
-  if (task.length < 2) throw new Error('請先輸入至少 2 個字的想法。');
-  const selected = category === 'auto' ? inferCategory(task) : (CATEGORIES[category] ? category : 'general');
-  const meta = CATEGORIES[selected];
-  const questions = getQuestions(selected);
-  const a = Object.fromEntries(questions.map(q => [q.id, clean(answers[q.id])]));
-  const missing = questions.filter(q => !a[q.id]).map(q => q.label);
-  const lines = [`# 任務`, `請擔任${meta.role}，協助我完成以下任務：`, task, '', '# 已知需求'];
-  const provided = questions.filter(q => a[q.id]);
-  if (provided.length) {
-    for (const q of provided) lines.push(`- ${q.label.replace(/[？?]$/, '')}：${a[q.id]}`);
-  } else lines.push('- 目前只提供上方的任務描述；請勿自行補成確定的背景事實。');
-  lines.push('', '# 工作方式', `1. ${meta.action}`);
-  if (selected === 'research') {
-    lines.push('2. 對重要結論提供可核對的依據；無法查證時明確標示。');
-  } else if (selected === 'coding') {
-    lines.push('2. 說明主要實作、驗證方式與仍存在的限制。');
-  } else if (selected === 'learning') {
-    lines.push('2. 使用容易理解的例子，安排練習或自我檢核。');
-  } else if (selected === 'writing') {
-    lines.push('2. 用符合讀者與目的的語氣撰寫，避免空泛套話。');
-  } else if (selected === 'creative') {
-    lines.push('2. 具體描述可視元素與氛圍，避免互相衝突的要求。');
-  } else lines.push('2. 優先提供能直接使用的內容與具體步驟。');
-  if (depth === 'detailed') {
-    lines.push('3. 先整理執行重點，再產出成果，最後核對成果是否符合已知需求。');
-    lines.push('4. 對不確定的資訊標示假設，避免捏造數字、來源或既定條件。');
-  } else if (depth === 'concise') {
-    lines.push('3. 直接給出成果；必要說明保持簡短。');
-  } else lines.push('3. 保持內容清楚、具體；必要時簡述採用的假設。');
-  lines.push('', '# 輸出要求');
-  lines.push(`- 使用繁體中文。`);
-  lines.push(`- ${a.format ? `依照「${a.format}」呈現。` : '使用最適合這個任務、方便閱讀與使用的格式。'}`);
-  if (depth === 'detailed') lines.push('- 交付前檢查：是否完成任務、符合限制、資訊可核對、格式正確。');
-  if (missing.length) {
-    lines.push('', '# 資訊不足時');
-    lines.push(`若缺少的資訊會明顯影響成果，請先問我最多 3 個最重要的問題。優先確認：${missing.slice(0, 3).join('、')}。若任務描述已包含答案，無須重複提問。若不影響主要成果，可明示合理假設後繼續；不要把假設寫成事實。`);
+  idea = clean(idea).slice(0, 4000);
+  if (idea.length < 2) throw new Error('先寫下至少 2 個字的想法。');
+  const selected = category === 'auto' || !CATEGORIES[category] ? inferCategory(idea) : category;
+  const normalized = Object.fromEntries(Object.entries(answers && typeof answers === 'object' ? answers : {}).map(([key, value]) => [key, clean(value).slice(0, 1000)]));
+  if (selected === 'general' && needsGoal(idea) && !normalized.goal) {
+    const error = new Error('這個需求可能有不同目標；先說明你希望得到什麼結果。');
+    error.code = 'CLARIFICATION_REQUIRED';
+    error.questionId = 'goal';
+    throw error;
   }
-  return { text: lines.join('\n'), category: selected, missing, filled: provided.length, total: questions.length };
+  const questions = getQuestions(selected, normalized, idea);
+  const text = selected === 'computer' ? computerPrompt(idea, normalized, depth) : generalPrompt(idea, selected, normalized, depth);
+  return {
+    text,
+    category: selected,
+    filled: questions.filter(q => normalized[q.id]).length,
+    total: questions.length,
+    missing: questions.filter(q => !normalized[q.id] && !(q.id === 'intent' && inferComputerIntent(idea))).map(q => q.label)
+  };
 }

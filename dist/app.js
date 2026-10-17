@@ -1,4 +1,4 @@
-import { CATEGORIES, getQuestions, inferCategory, composePrompt } from './core.js';
+import { CATEGORIES, getQuestions, inferCategory, inferComputerIntent, composePrompt } from './core.js';
 
 const $ = id => document.getElementById(id);
 const idea = $('idea'), category = $('category'), depth = $('depth'), questions = $('questions'), result = $('result');
@@ -13,7 +13,7 @@ function selectedCategory() { return category.value === 'auto' ? inferCategory(i
 function updateDetected() {
   $('char-count').textContent = `${idea.value.length} / 4000`;
   const selected = selectedCategory();
-  $('detected').textContent = idea.value.trim() ? `${category.value === 'auto' ? '建議類型' : '已選類型'}：${CATEGORIES[selected].label}。可調整類型後查看對應補問。` : '輸入想法後，會建議適合的任務類型。';
+  $('detected').textContent = idea.value.trim() ? selected === 'computer' ? '建議類型：電腦整理。先確認這次的目的，才會產生對應提示詞。' : `${category.value === 'auto' ? '建議類型' : '已選類型'}：${CATEGORIES[selected].label}。可調整類型後查看對應補問。` : '輸入想法後，會建議適合的任務類型。';
   $('idea-error').textContent = '';
   if (!questions.hidden && questions.dataset.category !== selected) renderQuestions();
 }
@@ -26,13 +26,22 @@ function renderQuestions(previous = {}) {
   const selected = selectedCategory();
   const values = { ...readAnswers(), ...previous };
   questions.replaceChildren();
-  const intro = document.createElement('p'); intro.className = 'questions-intro'; intro.textContent = '回答有把握的部分即可。可以略過，產生的提示詞會請 AI 先確認關鍵缺漏。'; questions.append(intro);
-  for (const q of getQuestions(selected)) {
+  const intro = document.createElement('p'); intro.className = 'questions-intro'; intro.textContent = selected === 'computer' ? '先選主要目的；其他資訊可補充，讓提示詞更貼近你的情況。' : '只補充會影響結果的資訊；不知道的部分可以留空。'; questions.append(intro);
+  for (const q of getQuestions(selected, values, idea.value)) {
     const label = document.createElement('label'); label.textContent = q.label;
-    const optional = document.createElement('span'); optional.className = 'question-optional'; optional.textContent = '可選填'; label.append(optional);
-    const input = document.createElement(q.id === 'context' || q.id === 'constraints' ? 'textarea' : 'input');
+    const optional = document.createElement('span'); optional.className = 'question-optional'; optional.textContent = q.required ? '必填' : '可選填'; label.append(optional);
+    const input = document.createElement(q.options ? 'select' : q.id === 'context' || q.id === 'constraints' || q.id === 'protect' ? 'textarea' : 'input');
     if (input.tagName === 'INPUT') input.type = 'text';
-    input.maxLength = 1000; input.placeholder = q.placeholder; input.dataset.question = q.id; input.value = values[q.id] || '';
+    if (input.tagName === 'SELECT') {
+      const blank = document.createElement('option'); blank.value = ''; blank.textContent = '請選擇'; input.append(blank);
+      for (const item of q.options) { const option = document.createElement('option'); option.value = item.value; option.textContent = item.label; input.append(option); }
+    } else { input.maxLength = 1000; input.placeholder = q.placeholder || ''; }
+    input.dataset.question = q.id; input.value = values[q.id] || (q.id === 'intent' ? inferComputerIntent(idea.value) : '');
+    if (q.id === 'intent') input.addEventListener('change', () => {
+      const next = { ...readAnswers(), target: '' };
+      renderQuestions(next);
+      questions.querySelector('[data-question="target"]')?.focus();
+    });
     label.append(input); questions.append(label);
   }
   questions.dataset.category = selected;
@@ -77,7 +86,16 @@ function generate() {
     if ($('save-history').checked) saveHistory({ idea: idea.value.trim(), category: data.category, depth: depth.value, answers, date: new Intl.DateTimeFormat('zh-TW', { month: '2-digit', day: '2-digit' }).format(new Date()) });
     if (innerWidth < 721) $('result-panel').scrollIntoView({ behavior: 'smooth' });
     toast('完整提示詞已產生');
-  } catch (error) { $('idea-error').textContent = error.message; idea.focus(); }
+  } catch (error) {
+    $('idea-error').textContent = error.message;
+    if (error.code === 'CLARIFICATION_REQUIRED') {
+      questions.hidden = false; renderQuestions();
+      $('show-questions').firstChild.textContent = '收起補問 ';
+      $('result-status').textContent = '先確認目的'; $('result-status').classList.remove('ready');
+      result.hidden = true; $('result-actions').hidden = true; $('empty-result').hidden = false; $('missing-box').hidden = true;
+      questions.querySelector(`[data-question="${error.questionId}"]`)?.focus();
+    } else idea.focus();
+  }
 }
 
 idea.addEventListener('input', updateDetected); category.addEventListener('change', updateDetected);
