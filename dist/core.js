@@ -69,18 +69,56 @@ const CATEGORY_QUESTIONS = {
     { id: 'focus', label: '最想釐清哪個問題？', placeholder: '例如：成因、差異、改善方向' }
   ],
   coding: [
-    { id: 'environment', label: '使用什麼語言或環境？', placeholder: '例如：Python 3.12、React' },
-    { id: 'symptom', label: '目前遇到什麼問題？', placeholder: '錯誤訊息、重現步驟或預期行為' }
+    { id: 'platform', label: '程式要在哪裡執行？', placeholder: '例如：Windows、手機、瀏覽器；不確定可留空' },
+    { id: 'inputs', label: '程式要讀取什麼，產出什麼？', placeholder: '例如：讀取 CSV，輸出整理後的表格' }
   ],
   creative: [
+    { id: 'theme', label: '作品的主題或要傳達的訊息是什麼？', placeholder: '例如：校園活動、產品上市' },
     { id: 'style', label: '想要什麼風格？', placeholder: '例如：極簡、溫暖、復古' },
     { id: 'usage', label: '成果會用在哪裡？', placeholder: '例如：社群貼文、簡報封面' }
   ]
 };
 
+const CODING_FIX_QUESTIONS = [
+  { id: 'environment', label: '使用什麼語言或環境？', placeholder: '例如：Python 3.12、React' },
+  { id: 'symptom', label: '錯誤訊息或目前行為是什麼？', placeholder: '貼上錯誤訊息與重現步驟' },
+  { id: 'expected', label: '你預期程式怎麼運作？', placeholder: '描述正確結果' }
+];
+
+const compact = idea => idea.replace(/[\s，。？！!?：:、]/g, '');
+const codingMode = idea => /修復|除錯|偵錯|bug|錯誤|壞掉|無法執行|不能運作/i.test(idea) ? 'fix' : 'build';
+
+function clarificationFor(category, idea) {
+  const short = compact(idea);
+  if (category === 'coding') {
+    if (codingMode(idea) === 'fix' && /^(幫我|請幫我|我要|我想)?(修復|除錯|偵錯)(Python|JavaScript|React)?(程式|代碼|bug)?$/i.test(short)) {
+      return { id: 'symptom', label: '請提供錯誤訊息或具體症狀' };
+    }
+    if (/^(幫我|請幫我|我要|我想)?(做|寫|建立|開發|製作)?(一個|一款)?(程式|軟體|網站|網頁|APP)$/i.test(short)) {
+      return { id: 'goal', label: '這個程式要替你完成什麼工作？' };
+    }
+  }
+  if (category === 'writing' && /^(幫我|請幫我|我要|我想)?(寫|撰寫)?(一封|一篇)?(信|文章|貼文|文案)$/.test(short)) {
+    return { id: 'goal', label: '這份內容要達成什麼目的？' };
+  }
+  if (category === 'learning' && /^(我要|我想|幫我)?(學|學習)(英文|日文|中文|程式|數學|語言)$/.test(short)) {
+    return { id: 'goal', label: '你學這個主題最想達成什麼？' };
+  }
+  if (category === 'research' && /^(幫我|請幫我|我要|我想)?(分析|研究|調查)(問卷結果|資料|數據|市場)$/.test(short)) {
+    return { id: 'material', label: '你有什麼資料可以分析？' };
+  }
+  if (category === 'creative' && /^(幫我|請幫我|我要|我想)?(設計|做|製作)(一張|一個)?(海報|圖片|圖像|插畫|logo)$/i.test(short)) {
+    return { id: 'theme', label: '作品的主題或要傳達的訊息是什麼？' };
+  }
+  if (category === 'general' && /整理|處理|改善|優化|管理|幫我做/.test(idea)) {
+    return { id: 'goal', label: '你希望最後得到什麼結果？' };
+  }
+  return null;
+}
+
 export function inferCategory(idea = '') {
   if (/電腦|硬碟|磁碟|桌面|資料夾|檔案|文件整理|備份|垃圾檔案|儲存空間/.test(idea) && /整理|清理|清除|刪除|尋找|搜尋|找|空間|容量|備份|搬移|移動|變慢|速度/.test(idea)) return 'computer';
-  if (/學習|教學|入門|讀書|課程|複習|練習計畫/.test(idea)) return 'learning';
+  if (/學習|教學|入門|讀書|課程|複習|練習計畫|想學|要學|學英文|學日文|學數學/.test(idea)) return 'learning';
   if (/程式|網站|APP|bug|除錯|開發|程式碼|Python|JavaScript|React/.test(idea)) return 'coding';
   if (/研究|分析|數據|問卷|資料集|比較|調查/.test(idea)) return 'research';
   if (/寫|文案|信|文章|貼文|簡報稿|翻譯|改寫/.test(idea)) return 'writing';
@@ -109,15 +147,13 @@ export function getQuestions(category = 'general', answers = {}, idea = '') {
     questions.push({ id: 'protect', label: '哪些資料不能動？', placeholder: '例如：工作文件、照片；不確定可留空' });
     return questions;
   }
-  return [
-    ...COMMON_QUESTIONS.map(q => q.id === 'goal' && category === 'general' && needsGoal(idea) ? { ...q, required: true } : q),
-    ...(CATEGORY_QUESTIONS[category] || CATEGORY_QUESTIONS.general)
-  ];
+  const clarification = clarificationFor(category, idea);
+  const specific = category === 'coding' && codingMode(idea) === 'fix' ? CODING_FIX_QUESTIONS : CATEGORY_QUESTIONS[category] || CATEGORY_QUESTIONS.general;
+  return [...COMMON_QUESTIONS, ...specific].map(q => q.id === clarification?.id ? { ...q, label: clarification.label, required: true } : q);
 }
 
 const clean = value => String(value ?? '').trim();
 const bullet = (label, value) => value ? `- ${label}：${value}` : '';
-const needsGoal = idea => /整理|處理|改善|優化|管理|幫我做/.test(idea);
 
 function computerPrompt(idea, answers, depth) {
   const intent = answers.intent || inferComputerIntent(idea);
@@ -147,19 +183,21 @@ function computerPrompt(idea, answers, depth) {
 }
 
 function generalPrompt(idea, category, answers, depth) {
-  const labels = { goal: '目標成果', context: '背景與素材', constraints: '限制', audience: '對象', tone: '語氣', format: '形式', level: '目前程度', time: '可用時間', material: '資料來源', focus: '分析重點', environment: '技術環境', symptom: '問題與預期', style: '風格', usage: '用途' };
-  const fields = getQuestions(category).filter(q => clean(answers[q.id])).map(q => bullet(labels[q.id] || q.label, clean(answers[q.id])));
-  const lines = [`請協助我完成這件事：${idea}`];
+  const labels = { goal: '目標成果', context: '背景與素材', constraints: '限制', audience: '對象', tone: '語氣', format: '形式', level: '目前程度', time: '可用時間', material: '資料來源', focus: '分析重點', environment: '技術環境', symptom: '錯誤或症狀', expected: '預期行為', platform: '執行平台', inputs: '輸入與輸出', theme: '主題', style: '風格', usage: '用途' };
+  const buildingProgram = category === 'coding' && codingMode(idea) === 'build' && answers.goal;
+  const fields = getQuestions(category, answers, idea).filter(q => clean(answers[q.id]) && !(buildingProgram && q.id === 'goal')).map(q => bullet(labels[q.id] || q.label, clean(answers[q.id])));
+  const lines = [buildingProgram ? `請設計並實作一個程式，功能是：${answers.goal}。` : `請協助我完成：${idea}`];
   if (fields.length) lines.push(`補充資訊：\n${fields.join('\n')}`);
   const method = {
     writing: '依目標與對象寫出可直接使用的內容；若缺少會改變內容方向的資訊，先問我。',
     learning: '依目前程度與可用時間安排可執行的學習步驟，附上練習與檢查進度的方法。',
     research: '先說明分析依據，再整理發現、限制與可行建議；資料不足時不要編造結果。',
-    coding: '先確認問題與環境，再給可執行的修改和驗證方法；缺少錯誤資訊時先問我。',
+    coding: codingMode(idea) === 'fix' ? '請根據症狀與預期行為定位原因，提出可執行的修正與驗證步驟。' : '請依功能目標提出最小可用版本、實作步驟與驗證方法；缺少平台或輸入輸出資訊時先問我。',
     creative: '依用途與風格產出可實作的方案，描述關鍵元素與構圖。',
     general: '先釐清目標，再提供可執行的結果或步驟。'
   };
   lines.push(method[category] || method.general);
+  if (buildingProgram && /檔案|資料夾|刪除|搬移|更名/.test(`${idea} ${answers.goal}`)) lines.push('若會移動、更名或刪除檔案，先提供預覽並避免覆蓋既有資料。');
   if (depth === 'detailed') lines.push('包含必要的檢查方式與可能限制。');
   if (depth !== 'concise') lines.push('請使用繁體中文，內容清楚精簡。');
   return lines.join('\n\n');
@@ -170,13 +208,14 @@ export function composePrompt({ idea, category = 'auto', depth = 'balanced', ans
   if (idea.length < 2) throw new Error('先寫下至少 2 個字的想法。');
   const selected = category === 'auto' || !CATEGORIES[category] ? inferCategory(idea) : category;
   const normalized = Object.fromEntries(Object.entries(answers && typeof answers === 'object' ? answers : {}).map(([key, value]) => [key, clean(value).slice(0, 1000)]));
-  if (selected === 'general' && needsGoal(idea) && !normalized.goal) {
-    const error = new Error('這個需求可能有不同目標；先說明你希望得到什麼結果。');
+  const questions = getQuestions(selected, normalized, idea);
+  const required = questions.find(q => q.required && !normalized[q.id]);
+  if (required) {
+    const error = new Error(required.id === 'intent' ? '先選擇這次整理電腦的主要目的，再產生提示詞。' : `先回答「${required.label}」，再產生提示詞。`);
     error.code = 'CLARIFICATION_REQUIRED';
-    error.questionId = 'goal';
+    error.questionId = required.id;
     throw error;
   }
-  const questions = getQuestions(selected, normalized, idea);
   const text = selected === 'computer' ? computerPrompt(idea, normalized, depth) : generalPrompt(idea, selected, normalized, depth);
   return {
     text,

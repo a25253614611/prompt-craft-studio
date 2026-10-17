@@ -4,18 +4,27 @@ const $ = id => document.getElementById(id);
 const idea = $('idea'), category = $('category'), depth = $('depth'), questions = $('questions'), result = $('result');
 const storageKey = 'prompt-studio-history-v1';
 let toastTimer;
+let previousIdea = idea.value;
 
 function toast(message) {
   const node = $('toast'); node.textContent = message; node.classList.add('show');
   clearTimeout(toastTimer); toastTimer = setTimeout(() => node.classList.remove('show'), 2700);
 }
 function selectedCategory() { return category.value === 'auto' ? inferCategory(idea.value) : category.value; }
+function clearResult() {
+  result.value = ''; result.hidden = true; $('empty-result').hidden = false; $('result-actions').hidden = true; $('missing-box').hidden = true;
+  $('result-status').textContent = '尚未產生'; $('result-status').classList.remove('ready'); $('result-length').textContent = '';
+}
 function updateDetected() {
   $('char-count').textContent = `${idea.value.length} / 4000`;
   const selected = selectedCategory();
   $('detected').textContent = idea.value.trim() ? selected === 'computer' ? '建議類型：電腦整理。先確認這次的目的，才會產生對應提示詞。' : `${category.value === 'auto' ? '建議類型' : '已選類型'}：${CATEGORIES[selected].label}。可調整類型後查看對應補問。` : '輸入想法後，會建議適合的任務類型。';
   $('idea-error').textContent = '';
-  if (!questions.hidden && questions.dataset.category !== selected) renderQuestions();
+  if (!questions.hidden) {
+    const signature = getQuestions(selected, readAnswers(), idea.value).map(q => `${q.id}:${q.label}:${q.required || false}`).join('|');
+    if (questions.dataset.category !== selected) questions.replaceChildren();
+    if (questions.dataset.category !== selected || questions.dataset.signature !== signature) renderQuestions();
+  }
 }
 function readAnswers() {
   const data = {};
@@ -27,7 +36,8 @@ function renderQuestions(previous = {}) {
   const values = { ...readAnswers(), ...previous };
   questions.replaceChildren();
   const intro = document.createElement('p'); intro.className = 'questions-intro'; intro.textContent = selected === 'computer' ? '先選主要目的；其他資訊可補充，讓提示詞更貼近你的情況。' : '只補充會影響結果的資訊；不知道的部分可以留空。'; questions.append(intro);
-  for (const q of getQuestions(selected, values, idea.value)) {
+  const activeQuestions = getQuestions(selected, values, idea.value);
+  for (const q of activeQuestions) {
     const label = document.createElement('label'); label.textContent = q.label;
     const optional = document.createElement('span'); optional.className = 'question-optional'; optional.textContent = q.required ? '必填' : '可選填'; label.append(optional);
     const input = document.createElement(q.options ? 'select' : q.id === 'context' || q.id === 'constraints' || q.id === 'protect' ? 'textarea' : 'input');
@@ -45,6 +55,7 @@ function renderQuestions(previous = {}) {
     label.append(input); questions.append(label);
   }
   questions.dataset.category = selected;
+  questions.dataset.signature = activeQuestions.map(q => `${q.id}:${q.label}:${q.required || false}`).join('|');
 }
 function loadHistory() {
   try { const value = JSON.parse(localStorage.getItem(storageKey) || '[]'); return Array.isArray(value) ? value.slice(0, 8) : []; } catch { return []; }
@@ -65,7 +76,7 @@ function renderHistory() {
     const meta = document.createElement('small'); meta.textContent = `${CATEGORIES[item.category]?.label || '一般任務'} · ${item.date || ''}`;
     button.append(title, meta); button.addEventListener('click', () => {
       idea.value = item.idea || ''; category.value = item.category || 'auto'; depth.value = item.depth || 'balanced';
-      questions.hidden = false; renderQuestions(item.answers || {}); updateDetected();
+      previousIdea = idea.value; clearResult(); questions.hidden = false; questions.replaceChildren(); renderQuestions(item.answers || {}); updateDetected();
       $('workbench').scrollIntoView({ behavior: 'smooth' }); idea.focus(); toast('已載入先前的想法');
     }); list.append(button);
   }
@@ -98,7 +109,19 @@ function generate() {
   }
 }
 
-idea.addEventListener('input', updateDetected); category.addEventListener('change', updateDetected);
+function ideaChanged() {
+  if (idea.value !== previousIdea) {
+    previousIdea = idea.value; clearResult();
+    if (!questions.hidden) { questions.replaceChildren(); renderQuestions(); }
+  }
+  updateDetected();
+}
+idea.addEventListener('input', ideaChanged);
+category.addEventListener('change', () => { clearResult(); updateDetected(); });
+depth.addEventListener('change', clearResult);
+function answerChanged() { clearResult(); $('idea-error').textContent = ''; }
+questions.addEventListener('input', answerChanged);
+questions.addEventListener('change', answerChanged);
 $('show-questions').addEventListener('click', () => {
   if (idea.value.trim().length < 2) { $('idea-error').textContent = '先寫下至少 2 個字的想法，再查看補問。'; idea.focus(); return; }
   questions.hidden = !questions.hidden;
@@ -108,12 +131,11 @@ $('show-questions').addEventListener('click', () => {
 $('generate').addEventListener('click', generate);
 $('reset').addEventListener('click', () => {
   idea.value = ''; category.value = 'auto'; depth.value = 'balanced'; questions.hidden = true; questions.replaceChildren();
-  result.value = ''; result.hidden = true; $('empty-result').hidden = false; $('result-actions').hidden = true; $('missing-box').hidden = true;
-  $('result-status').textContent = '尚未產生'; $('result-status').classList.remove('ready'); $('result-length').textContent = '';
+  previousIdea = ''; clearResult();
   $('show-questions').firstChild.textContent = '查看補問 '; updateDetected(); idea.focus();
 });
 document.querySelectorAll('[data-example]').forEach(button => button.addEventListener('click', () => {
-  idea.value = button.dataset.example; updateDetected(); idea.focus();
+  idea.value = button.dataset.example; ideaChanged(); idea.focus();
 }));
 $('copy').addEventListener('click', async () => {
   if (!result.value.trim()) return;

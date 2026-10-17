@@ -8,6 +8,7 @@ assert.equal(inferCategory('分析問卷結果'), 'research');
 assert.equal(inferCategory('學習英文'), 'learning');
 assert.equal(inferCategory('幫我規劃一週的 Python 入門學習計畫'), 'learning');
 assert.equal(inferCategory('設計一張海報'), 'creative');
+assert.equal(inferCategory('我要學英文'), 'learning');
 assert.equal(inferComputerIntent('我要整理我的電腦'), '');
 assert.equal(inferComputerIntent('我要找不到的照片'), 'find');
 assert.throws(() => composePrompt({ idea: ' ' }), /至少 2 個字/);
@@ -20,6 +21,24 @@ assert.throws(
   error => error.code === 'CLARIFICATION_REQUIRED' && error.questionId === 'goal'
 );
 assert.match(composePrompt({ idea: '我要整理我的房間', answers: { goal: '找出遺失的鑰匙' } }).text, /找出遺失的鑰匙/);
+for (const [idea, questionId] of [
+  ['我要一個程式', 'goal'],
+  ['幫我寫一封信', 'goal'],
+  ['我要學英文', 'goal'],
+  ['分析問卷結果', 'material'],
+  ['設計一張海報', 'theme'],
+  ['幫我修復 Python bug', 'symptom']
+]) {
+  assert.throws(() => composePrompt({ idea }), error => error.code === 'CLARIFICATION_REQUIRED' && error.questionId === questionId);
+  assert.equal(getQuestions(inferCategory(idea), {}, idea).find(q => q.id === questionId).required, true);
+}
+const program = composePrompt({ idea: '我要一個程式', answers: { goal: '自動整理下載資料夾' } });
+assert.match(program.text, /自動整理下載資料夾/);
+assert.match(program.text, /最小可用版本/);
+assert.match(program.text, /先提供預覽並避免覆蓋/);
+assert.doesNotMatch(program.text, /修正|錯誤訊息/);
+assert.match(composePrompt({ idea: '我想做一個記帳程式' }).text, /最小可用版本/);
+assert.match(composePrompt({ idea: '幫我修復 Python bug', answers: { symptom: '執行時出現 TypeError' } }).text, /定位原因/);
 
 const computerQuestions = getQuestions('computer', { intent: 'find' });
 assert.equal(computerQuestions[0].id, 'intent');
