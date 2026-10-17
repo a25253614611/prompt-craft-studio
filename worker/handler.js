@@ -146,7 +146,7 @@ export default {
       headers: {
         'content-type': asset.type,
         'x-content-type-options': 'nosniff',
-        'cache-control': path === '/' ? 'no-cache' : 'public, max-age=300'
+        'cache-control': 'no-cache'
       }
     });
   }

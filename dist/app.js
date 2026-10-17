@@ -1,5 +1,5 @@
-import { CATEGORIES, getQuestions, inferCategory, inferComputerIntent, inferProductTask, composePrompt } from './core.js';
-import { checkOllama, ollamaApi } from './ollama.js';
+import { CATEGORIES, getQuestions, inferCategory, inferComputerIntent, inferProductTask, composePrompt } from './core.js?v=3';
+import { checkOllama, ollamaApi } from './ollama.js?v=3';
 
 const $ = id => document.getElementById(id);
 const idea = $('idea'), category = $('category'), depth = $('depth'), questions = $('questions'), result = $('result');
@@ -138,7 +138,7 @@ function renderHistory() {
 }
 function showResult(data) {
   result.value = data.text; result.hidden = false; $('empty-result').hidden = true; $('result-actions').hidden = false;
-  $('result-status').textContent = '可以使用'; $('result-status').classList.add('ready');
+  $('result-status').textContent = data.mode === 'rules' ? '本機規則產生' : '可以使用'; $('result-status').classList.add('ready');
   $('result-length').textContent = `${data.text.length} 字元 · 已回答 ${data.filled}/${data.total} 題${data.mode !== 'rules' ? ` · API ${aiCalls} 次 / ${aiTokens} tokens` : ''}`;
   $('missing-box').hidden = data.missing.length === 0;
   const list = $('missing-list'); list.replaceChildren();
@@ -184,11 +184,11 @@ async function generate() {
     }
     $('result-status').textContent = `${providerName()} 撰寫中…`;
     const reply = await api('generate', { ...requestData(), answers: aiPlan.questions.map(q => ({ question: q.label, answer: answers[q.id] })) });
-    showResult({ text: reply.text, category: selectedCategory(), filled: aiPlan.questions.length, total: aiPlan.questions.length, missing: [], mode: provider() });
+    showResult({ text: reply.text, category: selectedCategory(), filled: aiPlan.questions.length, total: aiPlan.questions.length, missing: [], mode: reply.source === 'rules' ? 'rules' : provider() });
     $('idea-error').textContent = '';
     if ($('save-history').checked) saveHistory({ idea: idea.value.trim(), category: category.value, depth: depth.value, answers, plan: aiPlan, mode: provider(), date: new Intl.DateTimeFormat('zh-TW', { month: '2-digit', day: '2-digit' }).format(new Date()) });
     if (innerWidth < 721) $('result-panel').scrollIntoView({ behavior: 'smooth' });
-    toast(`${providerName()} 已產生完整提示詞`);
+    toast(reply.source === 'rules' ? '已用本機規則產生完整提示詞' : `${providerName()} 已產生完整提示詞`);
   } catch (error) {
     $('idea-error').textContent = error.message;
     $('result-status').textContent = 'AI 暫時不可用';

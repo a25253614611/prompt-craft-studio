@@ -7,6 +7,14 @@ const generateInstruction = `你是繁體中文提示詞編輯。把原始需求
 範例：原始需求「我要整理我的電腦」；已回答「最想先達成什麼？→尋找資料」。此時目標是定位使用者想找的資料，不是整理所有檔案。合格的 prompt 應先問想找的檔案名稱、類型、日期等線索與作業系統，再據此搜尋或提供搜尋步驟，最後回報檔案路徑或已查位置；不得擅自刪除或搬移。
 產品驗收範例：原始需求「第一版先完成作品藝廊、搜尋分類、作品詳情及投稿管理；內容穩定後再加入排行榜、指令集與小工具。請驗收網站，根據公開頁面說明分析依據、發現、限制與建議。」合格的 prompt 是「請驗收網站第一版。若尚未提供網址，先請我提供網站或可測試環境；取得後逐項測試作品藝廊的列表瀏覽、搜尋分類的查詢與篩選、作品詳情的內容與導覽、投稿管理的提交與管理流程。每項記錄操作步驟、預期結果、實際結果與證據；不可把未測試項目寫成通過。先列出公開頁面等分析依據，再整理發現、限制與可行建議，並列明上線前必須修復的問題。排行榜、指令集與小工具列為內容穩定後的下一階段，勿納入第一版通過條件。資料不足時標示待驗證，不編造結果。請用繁體中文精簡呈現。」`;
 const generateFormat = { type: 'object', properties: { prompt: { type: 'string' } }, required: ['prompt'], additionalProperties: false };
+const computerPrompts = {
+  '尋找資料': '請協助我在電腦中找出需要的資料。先問我想找的檔名或內容關鍵字、檔案類型、可能日期與作業系統；依線索從最可能的位置開始搜尋。若可操作這台電腦，實際搜尋並回報找到的檔名與完整路徑；若無法存取，提供我能照做的搜尋步驟。找不到時列出已查的位置與下一步。只搜尋，不刪除、搬移或覆蓋檔案。',
+  '釋放空間': '請協助我找出電腦儲存空間不足的原因並安全釋放空間。先確認作業系統與空間不足的磁碟，查看實際占用最大的資料夾與檔案，再依占用量和風險提出處理順序。清楚區分可清理的暫存資料與重要個人檔案；在刪除、解除安裝或清空資源回收筒前，先列出項目、影響與預期釋放量，取得我確認後才執行。完成時回報前後可用空間與未處理項目；沒有量測資料時不要編造數字。',
+  '分類檔案': '請協助我分類電腦檔案。先問我要整理的資料夾與作業系統，盤點現有檔案類型和命名，再提出簡單的分類規則與資料夾結構。先預覽每個檔案預計移到哪裡、是否有同名或重複檔案；經我確認後才搬移或更名，避免覆蓋並保留還原方式。完成時列出已分類、待確認與未處理的項目。',
+  '備份資料': '請協助我備份電腦資料。先問要備份的資料範圍、作業系統、目的地與可用空間，再提出可執行的備份步驟。先確認目的地可用且不會覆蓋既有備份；執行後核對檔案數量並抽查能否開啟。確認備份可用前保留原始資料，完成時回報備份位置、核對結果與尚未備份的項目。',
+  '改善速度': '請協助我找出電腦變慢的原因並改善。先問作業系統、何時變慢及具體症狀，再依觀察結果檢查處理器、記憶體、磁碟空間與開機程式等可能瓶頸。按風險與預期效果提出可執行的改善步驟；需變更設定、解除安裝或刪除資料前先說明影響並取得確認。完成時列出已檢查的證據、採取的措施與仍待驗證的問題。',
+  '還不確定': '我想整理電腦，但尚未確定真正目的。請先用一個問題幫我區分：是找資料、釋放空間、分類檔案、備份資料，還是改善速度？依我的回答提出對應的具體步驟與可檢查的完成條件；若資訊仍不足，只問會改變做法的關鍵細節。確認目的前不要預設刪除或搬移檔案。'
+};
 
 const clean = (value, max) => typeof value === 'string' ? value.trim().slice(0, max) : '';
 
@@ -45,14 +53,19 @@ function normalizePlan(text, idea) {
 export async function ollamaApi(path, payload) {
   const idea = clean(payload.idea, 4000);
   if (idea.length < 2) throw new Error('請先輸入至少 2 個字的想法。');
+  const ambiguousComputer = /整理.{0,5}電腦|電腦.{0,5}整理/.test(idea) && !/找|搜尋|空間|容量|分類|歸檔|備份|速度|變慢|卡頓|清理|刪除/.test(idea);
   if (path === 'plan') {
     const usage = { inputTokens: 0, outputTokens: 0, totalTokens: 0, calls: 0 };
-    if (/整理.{0,5}電腦|電腦.{0,5}整理/.test(idea) && !/找|搜尋|空間|容量|分類|歸檔|備份|速度|變慢|卡頓|清理|刪除/.test(idea)) {
+    if (ambiguousComputer) {
       return { understanding: '想整理電腦，但尚未確認真正目的。', questions: [{ id: 'q1', label: '這次整理電腦，最想先達成什麼？', options: ['尋找資料', '釋放空間', '分類檔案', '備份資料', '改善速度', '還不確定'] }], usage };
     }
     if (/驗收/.test(idea) && /網頁|網站/.test(idea) && !/https?:\/\//.test(idea)) {
       return { understanding: '要驗收網站，但尚未提供可檢查的頁面或測試環境。', questions: [{ id: 'q1', label: '請提供要驗收的網站網址或可測試環境。', options: [] }], usage };
     }
+  }
+  if (path === 'generate' && ambiguousComputer) {
+    const purpose = (Array.isArray(payload.answers) ? payload.answers : []).find(item => /最想先達成/.test(item?.question))?.answer;
+    if (Object.hasOwn(computerPrompts, purpose)) return { text: computerPrompts[purpose], usage: { inputTokens: 0, outputTokens: 0, totalTokens: 0, calls: 0 }, source: 'rules' };
   }
   const input = {
     idea,

@@ -45,9 +45,14 @@ const result = await ollamaApi('generate', {
   idea: '我要整理我的電腦', category: 'auto', depth: 'balanced',
   answers: [{ question: plan.questions[0].label, answer: '尋找資料' }]
 });
-assert.match(result.text, /尋找資料/);
-assert.equal(result.usage.totalTokens, 120);
+assert.match(result.text, /找出需要的資料/);
+assert.match(result.text, /完整路徑/);
+assert.match(result.text, /不刪除、搬移或覆蓋/);
+assert.equal(result.source, 'rules');
+assert.equal(result.usage.calls, 0);
+const modelResult = await ollamaApi('generate', { idea: '幫我寫一封合作邀請信' });
+assert.equal(modelResult.usage.totalTokens, 120);
 badOutput = true;
-await assert.rejects(() => ollamaApi('generate', { idea: '我要整理我的電腦' }), /品質不足/);
+await assert.rejects(() => ollamaApi('generate', { idea: '幫我寫一封合作邀請信' }), /品質不足/);
 assert.equal(calls, 4);
 console.log('Ollama integration checks passed.');
