@@ -2,6 +2,8 @@
 
 將簡短想法轉成可直接交給 AI 執行的繁體中文提示詞。Ollama 與 Gemini 模式先分析真正目標，最多提出 3 個會改變做法的問題，再依回答產生任務專屬提示詞。沒有可用模型時仍可使用本機規則。產出可編輯、複製及下載；最近使用紀錄只有勾選後才會存入瀏覽器。
 
+**線上使用：**[GitHub Pages 規則版](https://a25253614611.github.io/prompt-craft-studio/)公開開放，不需帳號或 API 金鑰，所有提示詞在瀏覽器內依規則產生。[Sites 完整版](https://prompt-craft-studio.a25253614611.chatgpt.site/)目前僅開放專案擁有者存取，提供 Gemini 模式；Gemini 金鑰只保存在 Sites 的伺服端 secret，沒有放入 GitHub 原始碼。
+
 「整理電腦」但未說目的，以及「驗收網站」但未提供網址等明確情境，會先用本機規則提出一個關鍵問題，避免模型問可自行查證的問題。電腦整理的六種已知目的也由本機規則產生完整提示詞，網站會標示來源；其他需求仍使用所選的 Ollama 或 Gemini 模型。
 
 ## Ollama 本機模式
@@ -24,3 +26,5 @@
 ## 本機驗證
 
 執行 `npm run build` 後執行 `npm test`。Build 會把靜態頁面與伺服端 API 打包成 Sites Worker，無需安裝外部套件。自動測試使用模擬 Ollama 與 Gemini 回應，不消耗免費額度。
+
+執行 `npm run build:pages` 可建立 `.pages/` 靜態版本。推送到 `main` 時，GitHub Actions 會先執行建置和測試，再發布這個規則版；GitHub Pages 不執行 Gemini 後端。

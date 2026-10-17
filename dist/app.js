@@ -43,6 +43,13 @@ async function prepareAI() {
   return plan;
 }
 async function checkAI() {
+  if (document.documentElement.dataset.mode === 'rules') {
+    $('ai-provider').value = 'rules';
+    $('ai-state').textContent = 'GitHub Pages · 規則版';
+    $('ollama-help').hidden = true;
+    updateDetected();
+    return;
+  }
   const [ollama, gemini] = await Promise.all([
     checkOllama(),
     fetch('/api/status', { cache: 'no-store' }).then(async response => response.ok ? response.json() : {}).catch(() => ({}))
