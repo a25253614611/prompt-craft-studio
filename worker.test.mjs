@@ -36,8 +36,17 @@ globalThis.fetch = async (_url, options) => {
     }) }] } }], usageMetadata: { promptTokenCount: 100, candidatesTokenCount: 50, totalTokenCount: 150 }
   });
   if (calls === 2) return Response.json({
-    candidates: [{ content: { parts: [{ text: '請協助我整理電腦，目的是尋找去年照片。先依檔名、日期和可能位置搜尋；確認前不要刪除或移動資料。' }] } }],
+    candidates: [{ content: { parts: [{ text: JSON.stringify({
+      objective: '協助我在電腦中尋找資料。',
+      steps: ['先確認要找的檔案線索與作業系統。', '依檔名、類型、日期和可能位置縮小搜尋；找不到時再提供下一步。'],
+      deliverables: ['提供可照做的搜尋步驟，以及找到檔案後的核對方式。'],
+      questions: ['要找什麼資料？', '使用什麼作業系統？', '第三題不應出現'],
+      constraints: []
+    }) }] } }],
     usageMetadata: { promptTokenCount: 90, candidatesTokenCount: 80, totalTokenCount: 170 }
+  });
+  if (calls === 3) return Response.json({
+    candidates: [{ content: { parts: [{ text: JSON.stringify({ objective: '請先提供資訊', steps: [], deliverables: [], questions: [] }) }] } }]
   });
   return Response.json({}, { status: 429 });
 };
@@ -55,10 +64,15 @@ const generatedResponse = await worker.fetch(post('/api/generate', {
 }), env);
 assert.equal(generatedResponse.status, 200);
 const generated = await generatedResponse.json();
-assert.match(generated.text, /尋找去年照片/);
+assert.match(generated.text, /# 執行步驟/);
+assert.match(generated.text, /縮小搜尋/);
+assert.match(generated.text, /尋找資料/);
+assert.doesNotMatch(generated.text, /第三題不應出現/);
+assert.match(generated.text, /不要刪除、搬移或覆蓋/);
 assert.equal(generated.usage.totalTokens, 170);
+assert.equal((await worker.fetch(post('/api/generate', { idea: '我要整理我的電腦' }), env)).status, 502);
 assert.equal((await worker.fetch(post('/api/generate', { idea: '我要整理我的電腦' }), env)).status, 429);
-assert.equal(calls, 3);
+assert.equal(calls, 4);
 
 const homepage = await worker.fetch(new Request(url), env);
 assert.equal(homepage.status, 200);

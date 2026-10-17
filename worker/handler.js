@@ -13,10 +13,11 @@ const planInstruction = `你是繁體中文需求分析師。使用第一性原�
 若需求是「我要整理我的電腦」且沒有說目的，第一題必須區分尋找資料、釋放空間、分類檔案、備份或改善速度；不能預設刪檔。若是產品驗證且沒有指定交付成果，先區分範圍評估、驗收標準、功能規格或分期規劃。
 不要假裝已讀取網頁、檔案或電腦。只回傳 JSON：{"understanding":"一句話說明你理解的任務與尚未確定的關鍵","questions":[{"label":"問題文字","options":["選項1","選項2"]}]}。開放式問題的 options 用空陣列。`;
 
-const generateInstruction = `你是將簡短需求改寫成「可直接交給另一個 AI 執行」之提示詞的編輯。請使用繁體中文。
-先根據使用者原文和回答判斷具體目的，再寫出能產生實際成果的提示詞。保留原文中的具體功能、範圍、先後順序和限制；不要只重述原文或堆疊角色、工作方式、空泛品質要求。不要編造資料、來源、測試結果或使用者意圖。
-針對任務指定明確的交付內容和可檢查的完成條件。若仍缺少會改變做法的資訊，指示執行者先問最關鍵的問題；不要替使用者決定。涉及刪除、覆蓋、搬移資料等動作，要求先列出影響並取得使用者確認。若原文聲稱根據公開頁面但沒有網址，標明來源尚待核對。
-只輸出完整提示詞本身，不要解說、不要 Markdown 程式碼圍欄。篇幅依指定長度控制，避免重複。`;
+const generateInstruction = `你是提示詞編輯，將使用者的簡短需求與已回答的問題，轉成「另一個 AI 可以據以完成任務」的繁體中文提示詞。
+先從第一性原則判斷已確認的目的，再寫出具體執行步驟、應交付的成果和可檢查的條件。已回答的問題是事實，不要重問；保留原文中的具體功能、範圍、先後順序和限制。不要編造資料、來源、測試結果或意圖。
+最重要：產出必須是任務提示詞，不是給使用者的一串補問。資訊仍不足時，只列會改變做法的未解問題，最多使用輸入中的 remainingQuestionBudget 題；即使有問題，也要寫出取得答案後該如何完成任務。不要把「請先提供資訊」當作唯一交付成果。
+電腦整理若已回答「尋找資料」，目的就是找資料；步驟應包含安全搜尋及找不到時的下一步，不要轉成刪檔或泛泛整理。涉及刪除、覆蓋、搬移資料，要先列出影響並取得確認。產品驗證要逐項保留原文功能並提出可測試的驗收方式；若聲稱根據公開頁面卻沒有網址，標示來源待核對。
+只回傳 JSON 物件，不要程式碼圍欄：{"objective":"明確、可執行的任務目標","steps":["具體步驟"],"deliverables":["實際成果及可檢查條件"],"questions":["若不問就會改變做法的未解問題"],"constraints":["必要限制"]}。steps 至少 2 項，deliverables 至少 1 項；questions 可以為空。不要在 steps 或 deliverables 中只寫問題。避免重複與空泛套話。`;
 
 function json(data, status = 200) {
   return new Response(JSON.stringify(data), {
@@ -107,6 +108,36 @@ function normalizePlan(text, idea) {
   return { understanding: clean(data.understanding, 280) || '已分析你的目標；請補充會改變做法的資訊。', questions };
 }
 
+function normalizeGenerated(text, input, answers) {
+  let data;
+  try { data = JSON.parse(text.replace(/^```(?:json)?\s*|\s*```$/g, '')); }
+  catch { throw new Error('Gemini 未回傳可用的提示詞。'); }
+  const items = (value, limit) => (Array.isArray(value) ? value : []).slice(0, limit).map(item => clean(item, 500)).filter(Boolean);
+  const objective = clean(data?.objective, 400);
+  const steps = items(data?.steps, 6);
+  const deliverables = items(data?.deliverables, 4);
+  const questions = items(data?.questions, Math.max(0, 3 - answers.length));
+  const constraints = items(data?.constraints, 4);
+  if (!objective || steps.length < 2 || !deliverables.length || steps.every(step => /^[請先]*[問提]/.test(step))) {
+    throw new Error('Gemini 未產生可執行的提示詞。');
+  }
+  const known = [`原始需求：${input.idea}`, ...answers.map(item => `${item.question}：${item.answer}`)];
+  const sections = [
+    `# 任務\n${objective}`,
+    `# 已知資訊\n${known.map(item => `- ${item}`).join('\n')}`,
+    `# 執行步驟\n${steps.map((item, index) => `${index + 1}. ${item}`).join('\n')}`,
+    `# 交付成果\n${deliverables.map(item => `- ${item}`).join('\n')}`
+  ];
+  if (questions.length) sections.push(`# 必要時先確認\n${questions.map((item, index) => `${index + 1}. ${item}`).join('\n')}\n取得答案後繼續完成上述成果，不要只停在補問。`);
+  const safeguards = [...constraints];
+  if (input.category === 'computer' || /整理.{0,5}電腦|電腦.{0,5}整理/.test(input.idea)) {
+    safeguards.push('未經我確認，不要刪除、搬移或覆蓋任何資料；不要假裝已檢查我的電腦。');
+  }
+  safeguards.push('使用繁體中文；無法查證的資訊標為待確認，不要捏造結果。');
+  sections.push(`# 限制\n${safeguards.map(item => `- ${item}`).join('\n')}`);
+  return sections.join('\n\n').slice(0, 12000);
+}
+
 async function handleApi(request, env, path) {
   if (path === '/api/status' && request.method === 'GET') return json({ configured: Boolean(env.GEMINI_API_KEY), model: MODEL });
   if (!['/api/plan', '/api/generate'].includes(path)) return json({ error: '找不到此功能。' }, 404);
@@ -129,11 +160,10 @@ async function handleApi(request, env, path) {
     catch { return json({ error: 'Gemini 分析格式不正確，請重試。', code: 'INVALID_RESPONSE' }, 502); }
   }
   const answers = normalizeAnswers(raw.answers);
-  const reply = await callGemini(env, generateInstruction, { ...input, answers }, false, input.depth === 'detailed' ? 2200 : 1400);
+  const reply = await callGemini(env, generateInstruction, { ...input, answers, remainingQuestionBudget: Math.max(0, 3 - answers.length) }, true, input.depth === 'detailed' ? 2600 : 1800);
   if (reply.error) return reply.error;
-  const text = reply.text.replace(/^```(?:markdown|text)?\s*|\s*```$/g, '').trim().slice(0, 12000);
-  if (text.length < 20) return json({ error: '產出過短，請重試。', code: 'INVALID_RESPONSE' }, 502);
-  return json({ text, usage: reply.usage });
+  try { return json({ text: normalizeGenerated(reply.text, input, answers), usage: reply.usage }); }
+  catch { return json({ error: 'Gemini 未產生可執行的提示詞，請重試。', code: 'INVALID_RESPONSE' }, 502); }
 }
 
 export default {
