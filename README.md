@@ -7,7 +7,7 @@
 1. 在使用網站的 **同一台電腦** 安裝 [Ollama for Windows](https://docs.ollama.com/windows)，執行 `ollama pull qwen3:4b`，並確認 Ollama 正在執行。
 2. 在此 Git 專案資料夾雙擊 `啟動本機網站.cmd`，或執行 `node local-server.mjs` 後開啟 `http://127.0.0.1:4173/`。顯示「Ollama qwen3:4b 已就緒」時，產生方式會自動選擇 Ollama。網站只呼叫此電腦 `127.0.0.1:11434` 的 Ollama；不需雲端 API 金鑰。模型檔約 2.5 GB，另需 Ollama 程式與執行空間。
 
-本機啟動器會啟動網站與 Ollama；先檢查 `%LOCALAPPDATA%\Programs\OllamaPortable\ollama.exe`，再檢查 `PATH` 中的 Ollama。這台電腦使用 [Ollama 官方獨立命令列套件](https://docs.ollama.com/windows) 0.40.5，保留 CPU 與 Vulkan 後端。使用本機模型時，提示詞在本機處理；啟動器自行啟動的 Ollama 會停用雲端功能。
+本機啟動器會啟動網站與 Ollama；先檢查 `%LOCALAPPDATA%\Programs\OllamaPortable\ollama.exe`，再檢查 `PATH` 中的 Ollama。這台電腦使用 [Ollama 官方獨立命令列套件](https://docs.ollama.com/windows) 0.40.5，保留 CPU 與 Vulkan 後端。使用本機模型時，提示詞在本機處理；啟動器自行啟動的 Ollama 會停用雲端功能並關閉 Flash Attention，以避開這台電腦上實測的 Vulkan 載入錯誤。
 
 這台電腦的 Chrome 與 ChatGPT 內建瀏覽器無法從線上 HTTPS 網站直接連到 `127.0.0.1`，因此 Ollama 模式請使用上方的本機網址。線上網址保留 Gemini 與規則模式。本機網站只監聽 `127.0.0.1:4173`，Ollama 保持預設的 `127.0.0.1:11434`；不要為此設定 `OLLAMA_HOST=0.0.0.0`。
 

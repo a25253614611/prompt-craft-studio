@@ -10,6 +10,7 @@ if (-not $ollamaReady) {
   else { $ollamaPath = (Get-Command ollama -ErrorAction SilentlyContinue).Source }
   if ($ollamaPath) {
     $env:OLLAMA_NO_CLOUD = '1'
+    $env:OLLAMA_FLASH_ATTENTION = '0'
     Start-Process -FilePath $ollamaPath -ArgumentList 'serve' -WorkingDirectory (Split-Path -Parent $ollamaPath) -WindowStyle Hidden
   }
 }

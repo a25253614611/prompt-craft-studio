@@ -27,7 +27,7 @@ async function api(path, payload) {
     try { data = await response.json(); } catch { throw new Error('網站暫時無法連接 Gemini，請稍後再試。'); }
     if (!response.ok) throw new Error(data.error || 'Gemini 暫時無法使用。');
   }
-  aiCalls += 1;
+  aiCalls += Number(data.usage?.calls ?? 1);
   aiTokens += Number(data.usage?.totalTokens) || 0;
   return data;
 }
