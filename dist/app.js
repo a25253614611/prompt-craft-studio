@@ -1,4 +1,4 @@
-import { CATEGORIES, getQuestions, inferCategory, inferComputerIntent, composePrompt } from './core.js';
+import { CATEGORIES, getQuestions, inferCategory, inferComputerIntent, inferProductTask, composePrompt } from './core.js';
 
 const $ = id => document.getElementById(id);
 const idea = $('idea'), category = $('category'), depth = $('depth'), questions = $('questions'), result = $('result');
@@ -18,7 +18,7 @@ function clearResult() {
 function updateDetected() {
   $('char-count').textContent = `${idea.value.length} / 4000`;
   const selected = selectedCategory();
-  $('detected').textContent = idea.value.trim() ? selected === 'computer' ? '建議類型：電腦整理。先確認這次的目的，才會產生對應提示詞。' : `${category.value === 'auto' ? '建議類型' : '已選類型'}：${CATEGORIES[selected].label}。可調整類型後查看對應補問。` : '輸入想法後，會建議適合的任務類型。';
+  $('detected').textContent = idea.value.trim() ? selected === 'computer' ? '建議類型：電腦整理。先確認這次的目的，才會產生對應提示詞。' : selected === 'product' ? '建議類型：產品規劃與驗收。先確認要交付的成果，避免只重述原文。' : `${category.value === 'auto' ? '建議類型' : '已選類型'}：${CATEGORIES[selected].label}。可調整類型後查看對應補問。` : '輸入想法後，會建議適合的任務類型。';
   $('idea-error').textContent = '';
   if (!questions.hidden) {
     const signature = getQuestions(selected, readAnswers(), idea.value).map(q => `${q.id}:${q.label}:${q.required || false}`).join('|');
@@ -35,7 +35,7 @@ function renderQuestions(previous = {}) {
   const selected = selectedCategory();
   const values = { ...readAnswers(), ...previous };
   questions.replaceChildren();
-  const intro = document.createElement('p'); intro.className = 'questions-intro'; intro.textContent = selected === 'computer' ? '只問 3 件事：整理目的、具體困擾、作業系統。不確定的資訊可留空。' : '只問最影響結果的 3 件事；不知道的部分可留空。'; questions.append(intro);
+  const intro = document.createElement('p'); intro.className = 'questions-intro'; intro.textContent = selected === 'computer' ? '只問 3 件事：整理目的、具體困擾、作業系統。不確定的資訊可留空。' : selected === 'product' ? '先選要交付的成果，再補來源與驗收條件；最多 3 題。' : '只問最影響結果的 3 件事；不知道的部分可留空。'; questions.append(intro);
   const activeQuestions = getQuestions(selected, values, idea.value);
   for (const q of activeQuestions) {
     const label = document.createElement('label'); label.textContent = q.label;
@@ -46,7 +46,7 @@ function renderQuestions(previous = {}) {
       const blank = document.createElement('option'); blank.value = ''; blank.textContent = '請選擇'; input.append(blank);
       for (const item of q.options) { const option = document.createElement('option'); option.value = item.value; option.textContent = item.label; input.append(option); }
     } else { input.maxLength = 1000; input.placeholder = q.placeholder || ''; }
-    input.dataset.question = q.id; input.value = values[q.id] || (q.id === 'intent' ? inferComputerIntent(idea.value) : '');
+    input.dataset.question = q.id; input.value = values[q.id] || (q.id === 'intent' ? inferComputerIntent(idea.value) : q.id === 'productTask' ? inferProductTask(idea.value) : '');
     if (q.id === 'intent') input.addEventListener('change', () => {
       const next = { ...readAnswers(), target: '' };
       renderQuestions(next);

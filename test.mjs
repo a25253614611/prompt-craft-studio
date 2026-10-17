@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { inferCategory, inferComputerIntent, getQuestions, composePrompt } from './dist/core.js';
+import { inferCategory, inferComputerIntent, inferProductTask, getQuestions, composePrompt } from './dist/core.js';
 
 assert.equal(inferCategory('我要整理我的電腦'), 'computer');
 assert.equal(inferCategory('幫我修復 Python bug'), 'coding');
@@ -9,6 +9,11 @@ assert.equal(inferCategory('學習英文'), 'learning');
 assert.equal(inferCategory('幫我規劃一週的 Python 入門學習計畫'), 'learning');
 assert.equal(inferCategory('設計一張海報'), 'creative');
 assert.equal(inferCategory('我要學英文'), 'learning');
+assert.equal(inferCategory('第一版先完成作品藝廊與投稿管理，之後再加入排行榜。這是產品分析。'), 'product');
+assert.equal(inferCategory('幫我修復第一版網站的錯誤'), 'coding');
+assert.equal(inferCategory('幫我寫第一版文章'), 'writing');
+assert.equal(inferProductTask('第一版先完成作品藝廊與投稿管理，之後再加入排行榜。這是產品分析。'), '');
+assert.equal(inferProductTask('請制定第一版的驗收標準'), 'acceptance');
 assert.equal(inferComputerIntent('我要整理我的電腦'), '');
 assert.equal(inferComputerIntent('我要找不到的照片'), 'find');
 assert.throws(() => composePrompt({ idea: ' ' }), /至少 2 個字/);
@@ -52,6 +57,7 @@ for (const [category, idea, ids] of [
   ['writing', '幫我寫一封信', ['goal', 'audience', 'context']],
   ['learning', '我要學英文', ['goal', 'level', 'time']],
   ['research', '分析問卷結果', ['goal', 'material', 'focus']],
+  ['product', '第一版先做作品藝廊', ['productTask', 'source', 'criterion']],
   ['coding', '我要一個程式', ['goal', 'platform', 'inputs']],
   ['coding', '幫我修復 Python bug', ['symptom', 'expected', 'environment']],
   ['creative', '設計一張海報', ['theme', 'usage', 'style']]
@@ -82,5 +88,23 @@ assert.match(writing.text, /週五舉行/);
 assert.doesNotMatch(writing.text, /專業但親切|電子郵件/);
 assert.doesNotMatch(writing.text, /專業協作者/);
 assert.doesNotMatch(writing.text, /成果是給誰看的/);
+
+const productIdea = '第一版先完成作品藝廊、搜尋分類、作品詳情及投稿管理；有穩定內容後，再加入排行榜、指令集與小工具。這是根據公開頁面做的產品分析。';
+assert.throws(() => composePrompt({ idea: productIdea }), error => error.code === 'CLARIFICATION_REQUIRED' && error.questionId === 'productTask');
+const review = composePrompt({ idea: productIdea, answers: { productTask: 'review' } });
+assert.equal(review.category, 'product');
+assert.equal(review.total, 3);
+assert.match(review.text, /評估第一版範圍/);
+assert.match(review.text, /作品藝廊、搜尋分類、作品詳情及投稿管理/);
+assert.match(review.text, /排行榜、指令集與小工具/);
+assert.match(review.text, /可觀察的驗收條件/);
+assert.match(review.text, /尚未提供網址或擷取證據/);
+assert.doesNotMatch(review.text, /請協助我完成：/);
+assert.doesNotMatch(review.text, /先說明分析依據，再整理發現、限制與可行建議/);
+const acceptance = composePrompt({ idea: productIdea, answers: { productTask: 'acceptance', source: 'https://example.com/gallery' } });
+assert.match(acceptance.text, /操作步驟、預期結果與失敗或空狀態/);
+assert.match(acceptance.text, /https:\/\/example.com\/gallery/);
+assert.doesNotMatch(acceptance.text, /尚未提供網址或擷取證據/);
+assert.equal(composePrompt({ idea: '請制定第一版作品藝廊的驗收標準' }).filled, 1);
 
 console.log('All prompt generation checks passed.');

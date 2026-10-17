@@ -4,6 +4,7 @@ export const CATEGORIES = {
   writing: { label: '寫作與溝通' },
   learning: { label: '學習與教學' },
   research: { label: '研究與分析' },
+  product: { label: '產品規劃與驗收' },
   coding: { label: '程式與產品' },
   creative: { label: '創意與圖像' }
 };
@@ -86,8 +87,23 @@ const CODING_FIX_QUESTIONS = [
   { id: 'environment', label: '使用什麼語言或環境？', placeholder: '例如：Python 3.12、React' }
 ];
 
+const PRODUCT_TASKS = {
+  review: { label: '評估第一版範圍', action: '評估第一版範圍是否足以完成核心使用流程，並提出可驗收的修正建議', output: '先給第一版範圍判斷；再用表格逐項列出功能、使用者價值、驗收條件與風險；最後列後續功能的啟動條件和待確認事項。' },
+  acceptance: { label: '制定驗收標準', action: '為第一版功能制定可觀察、可測試的驗收標準', output: '用驗收表列出每項第一版功能的前置條件、操作、預期結果、例外情況與驗證證據；最後列待確認事項。' },
+  spec: { label: '撰寫功能規格', action: '把初步分析轉成可供設計與開發使用的第一版功能規格', output: '依序列第一版範圍、使用者角色與流程、各功能的輸入輸出與狀態、驗收條件，以及明確排除的後續功能。' },
+  roadmap: { label: '規劃分期優先順序', action: '規劃第一版與後續版本的優先順序、依賴和啟動條件', output: '用分期表列出功能、優先順序、依賴與納入理由；另列進入下一階段前要觀察的證據及待確認事項。' }
+};
+
 const compact = idea => idea.replace(/[\s，。？！!?：:、]/g, '');
 const codingMode = idea => /修復|除錯|偵錯|bug|錯誤|壞掉|無法執行|不能運作/i.test(idea) ? 'fix' : 'build';
+
+export function inferProductTask(idea = '') {
+  if (/驗收標準|驗收條件|驗收清單|測試案例/.test(idea)) return 'acceptance';
+  if (/(?:評估|驗證|審核|檢查).{0,16}(?:第一版|MVP|範圍|產品|功能|需求)|(?:第一版|MVP|範圍|產品|功能|需求).{0,16}(?:評估|驗證|審核|檢查)/.test(idea)) return 'review';
+  if (/(?:撰寫|產出|制定|整理).{0,12}(?:需求規格|功能規格|PRD)|(?:需求規格|功能規格|PRD).{0,12}(?:撰寫|產出|制定|整理)/i.test(idea)) return 'spec';
+  if (/路線圖|優先順序|分期規劃|版本規劃/.test(idea)) return 'roadmap';
+  return '';
+}
 
 function clarificationFor(category, idea) {
   const short = compact(idea);
@@ -120,6 +136,8 @@ function clarificationFor(category, idea) {
 export function inferCategory(idea = '') {
   if (/電腦|硬碟|磁碟|桌面|資料夾|檔案|文件整理|備份|垃圾檔案|儲存空間/.test(idea) && /整理|清理|清除|刪除|尋找|搜尋|找|空間|容量|備份|搬移|移動|變慢|速度/.test(idea)) return 'computer';
   if (/學習|教學|入門|讀書|課程|複習|練習計畫|想學|要學|學英文|學日文|學數學/.test(idea)) return 'learning';
+  if (/程式|網站|APP|bug|除錯|開發|程式碼|Python|JavaScript|React/.test(idea) && /修復|除錯|偵錯|bug|錯誤|壞掉|無法執行|不能運作/i.test(idea)) return 'coding';
+  if (/產品分析|產品規劃|產品需求|功能規格|驗收標準|驗收條件|功能優先|分期規劃|版本規劃|作品藝廊|投稿管理|(?:第一版|首版|MVP).{0,60}(?:網站|平台|產品|功能|服務|系統)/.test(idea)) return 'product';
   if (/程式|網站|APP|bug|除錯|開發|程式碼|Python|JavaScript|React/.test(idea)) return 'coding';
   if (/研究|分析|數據|問卷|資料集|比較|調查/.test(idea)) return 'research';
   if (/寫|文案|信|文章|貼文|簡報稿|翻譯|改寫/.test(idea)) return 'writing';
@@ -143,6 +161,13 @@ export function getQuestions(category = 'general', answers = {}, idea = '') {
       { id: 'intent', label: '這次整理電腦，主要想達成什麼？', required: !inferComputerIntent(idea), options: Object.entries(COMPUTER_INTENTS).map(([value, data]) => ({ value, label: data.label })) },
       { id: 'target', label: COMPUTER_INTENTS[intent]?.question || '目前最具體的困擾是什麼？', placeholder: COMPUTER_INTENTS[intent]?.placeholder || '例如：找不到照片、硬碟快滿、桌面很亂' },
       { id: 'os', label: '使用什麼作業系統？', options: ['Windows', 'macOS', 'Linux', '不確定'].map(value => ({ value, label: value })) }
+    ];
+  }
+  if (category === 'product') {
+    return [
+      { id: 'productTask', label: '你要 AI 對這份產品分析交付什麼？', required: !inferProductTask(idea), options: Object.entries(PRODUCT_TASKS).map(([value, data]) => ({ value, label: data.label })) },
+      { id: 'source', label: '有可核對的公開頁面或需求文件嗎？', placeholder: '貼上網址或文件名稱；沒有可留空' },
+      { id: 'criterion', label: '第一版有哪些成功標準或必要限制？', placeholder: '例如：使用者能完成投稿；管理者能審核；不知道可留空' }
     ];
   }
   const clarification = clarificationFor(category, idea);
@@ -178,6 +203,38 @@ function computerPrompt(idea, answers, depth) {
   return lines.join('\n\n');
 }
 
+function productPrompt(idea, answers, depth) {
+  const task = PRODUCT_TASKS[answers.productTask || inferProductTask(idea)];
+  if (!task) {
+    const error = new Error('先選擇你要 AI 交付的產品成果。');
+    error.code = 'CLARIFICATION_REQUIRED';
+    error.questionId = 'productTask';
+    throw error;
+  }
+  const taskRequirements = {
+    review: '逐項評估原文的第一版功能：使用者價值、是否支撐核心流程、可觀察的驗收條件與主要風險；再說明後續功能為何暫緩，以及什麼證據能支持加入。',
+    acceptance: '對原文每項第一版功能列出使用情境、操作步驟、預期結果與失敗或空狀態；驗收條件要能實際測試，不要只寫「功能正常」。',
+    spec: '按原文第一版功能整理使用者角色、主要流程、必要畫面與狀態、輸入輸出及驗收條件；將後續功能另列為不在本次範圍。',
+    roadmap: '依核心使用流程與依賴排序原文的第一版功能；將後續功能另列，說明加入前要先觀察哪些內容或使用證據。'
+  };
+  const lines = [
+    `請以產品驗證主管的角度，${task.action}。`,
+    `# 初步產品分析\n${idea}`,
+    answers.source ? `# 可核對來源\n${answers.source}` : /公開頁面|公開資料|網站分析/.test(idea) ? '# 來源狀態\n原文提到公開頁面，但尚未提供網址或擷取證據；請把相關結論標為待驗證，不要聲稱已核實。' : '',
+    answers.criterion ? `# 成功標準與限制\n${answers.criterion}` : '',
+    '# 交付要求\n' + [
+      '1. 先區分原文中的已知資訊、推論與待確認事項；若有可核對來源，指出每個關鍵判斷的依據。',
+      `2. ${taskRequirements[answers.productTask || inferProductTask(idea)]}`,
+      '3. 第一版與後續版本分開呈現；逐項點名原文功能，不要改成「核心功能」等空泛概稱。',
+      '4. 對缺少的資訊列出最多 3 個會改變決策的問題；沒有數據時只寫建議觀察的指標，不捏造門檻或結果。'
+    ].join('\n'),
+    `# 輸出格式\n${task.output}使用繁體中文。`,
+    depth === 'detailed' ? '請補充主要例外情境、相依功能與每項驗收所需的證據。' : '',
+    depth === 'concise' ? '每項功能只保留最重要的一個理由與一個可驗證條件。' : ''
+  ].filter(Boolean);
+  return lines.join('\n\n');
+}
+
 function generalPrompt(idea, category, answers, depth) {
   const labels = { goal: '目標成果', context: '背景與素材', constraints: '限制', audience: '對象', tone: '語氣', format: '形式', level: '目前程度', time: '可用時間', material: '資料來源', focus: '分析重點', environment: '技術環境', symptom: '錯誤或症狀', expected: '預期行為', platform: '執行平台', inputs: '輸入與輸出', theme: '主題', style: '風格', usage: '用途' };
   const buildingProgram = category === 'coding' && codingMode(idea) === 'build' && answers.goal;
@@ -204,6 +261,7 @@ export function composePrompt({ idea, category = 'auto', depth = 'balanced', ans
   if (idea.length < 2) throw new Error('先寫下至少 2 個字的想法。');
   const selected = category === 'auto' || !CATEGORIES[category] ? inferCategory(idea) : category;
   const normalized = Object.fromEntries(Object.entries(answers && typeof answers === 'object' ? answers : {}).map(([key, value]) => [key, clean(value).slice(0, 1000)]));
+  if (selected === 'product' && !normalized.productTask) normalized.productTask = inferProductTask(idea);
   const questions = getQuestions(selected, normalized, idea);
   const required = questions.find(q => q.required && ((normalized[q.id] || '').length < 2 || /^[ㄅ-ㄩˊˇˋ˙]+$/.test(normalized[q.id] || '')));
   if (required) {
@@ -212,7 +270,7 @@ export function composePrompt({ idea, category = 'auto', depth = 'balanced', ans
     error.questionId = required.id;
     throw error;
   }
-  const text = selected === 'computer' ? computerPrompt(idea, normalized, depth) : generalPrompt(idea, selected, normalized, depth);
+  const text = selected === 'computer' ? computerPrompt(idea, normalized, depth) : selected === 'product' ? productPrompt(idea, normalized, depth) : generalPrompt(idea, selected, normalized, depth);
   return {
     text,
     category: selected,
