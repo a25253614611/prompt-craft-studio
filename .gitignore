@@ -3,3 +3,4 @@ dist/.openai/
 .env
 .env.*
 !.env.example
+.playwright-cli/

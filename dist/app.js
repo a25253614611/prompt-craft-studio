@@ -1,4 +1,5 @@
 import { CATEGORIES, getQuestions, inferCategory, inferComputerIntent, inferProductTask, composePrompt } from './core.js';
+import { checkOllama, ollamaApi } from './ollama.js';
 
 const $ = id => document.getElementById(id);
 const idea = $('idea'), category = $('category'), depth = $('depth'), questions = $('questions'), result = $('result');
@@ -6,20 +7,26 @@ const storageKey = 'prompt-studio-history-v1';
 let toastTimer;
 let previousIdea = idea.value;
 let aiAvailable = false;
+let ollamaAvailable = false;
 let aiPlan = null;
 let aiCalls = 0;
 let aiTokens = 0;
 let busy = false;
 
-function useAI() { return aiAvailable && $('use-ai').checked; }
+function provider() { return $('ai-provider').value; }
+function useAI() { return provider() !== 'rules'; }
+function providerName() { return provider() === 'ollama' ? 'Ollama' : 'Gemini'; }
 function resetPlan() { aiPlan = null; aiCalls = 0; aiTokens = 0; questions.replaceChildren(); }
 async function api(path, payload) {
-  const response = await fetch(`/api/${path}`, {
-    method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(payload)
-  });
   let data;
-  try { data = await response.json(); } catch { throw new Error('網站暫時無法連接 Gemini，請稍後再試。'); }
-  if (!response.ok) throw new Error(data.error || 'Gemini 暫時無法使用。');
+  if (provider() === 'ollama') data = await ollamaApi(path, payload);
+  else {
+    const response = await fetch(`/api/${path}`, {
+      method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(payload)
+    });
+    try { data = await response.json(); } catch { throw new Error('網站暫時無法連接 Gemini，請稍後再試。'); }
+    if (!response.ok) throw new Error(data.error || 'Gemini 暫時無法使用。');
+  }
   aiCalls += 1;
   aiTokens += Number(data.usage?.totalTokens) || 0;
   return data;
@@ -36,18 +43,18 @@ async function prepareAI() {
   return plan;
 }
 async function checkAI() {
-  try {
-    const response = await fetch('/api/status', { cache: 'no-store' });
-    if (!response.ok) throw new Error('狀態不可用');
-    const data = await response.json();
-    aiAvailable = Boolean(data.configured);
-  } catch { aiAvailable = false; }
-  $('use-ai').disabled = !aiAvailable;
-  $('use-ai').checked = aiAvailable;
-  $('ai-state').textContent = aiAvailable ? '金鑰已設定' : '尚未設定金鑰 · 使用本機規則';
+  const [ollama, gemini] = await Promise.all([
+    checkOllama(),
+    fetch('/api/status', { cache: 'no-store' }).then(async response => response.ok ? response.json() : {}).catch(() => ({}))
+  ]);
+  ollamaAvailable = ollama.available;
+  aiAvailable = Boolean(gemini.configured);
+  $('ai-provider').options[1].disabled = !ollamaAvailable;
+  $('ai-provider').options[2].disabled = !aiAvailable;
+  $('ai-provider').value = ollamaAvailable ? 'ollama' : aiAvailable ? 'gemini' : 'rules';
+  $('ai-state').textContent = ollamaAvailable ? 'Ollama qwen3:4b 已就緒' : ollama.connected ? 'Ollama 缺少 qwen3:4b 模型' : aiAvailable ? 'Gemini 已就緒' : 'Ollama 未連線 · 使用規則';
   updateDetected();
 }
-
 function toast(message) {
   const node = $('toast'); node.textContent = message; node.classList.add('show');
   clearTimeout(toastTimer); toastTimer = setTimeout(() => node.classList.remove('show'), 2700);
@@ -60,7 +67,7 @@ function clearResult() {
 function updateDetected() {
   $('char-count').textContent = `${idea.value.length} / 4000`;
   const selected = selectedCategory();
-  $('detected').textContent = idea.value.trim() ? useAI() ? 'Gemini 會先分析真正目標，只問必要問題；請確認上方任務類型是否合適。' : selected === 'computer' ? '建議類型：電腦整理。先確認這次的目的，才會產生對應提示詞。' : selected === 'product' ? '建議類型：產品規劃與驗收。先確認要交付的成果，避免只重述原文。' : `${category.value === 'auto' ? '建議類型' : '已選類型'}：${CATEGORIES[selected].label}。可調整類型後查看對應補問。` : '輸入想法後，會建議適合的任務類型。';
+  $('detected').textContent = idea.value.trim() ? useAI() ? `${providerName()} 會先分析真正目標，只問必要問題；請確認上方任務類型是否合適。` : selected === 'computer' ? '建議類型：電腦整理。先確認這次的目的，才會產生對應提示詞。' : selected === 'product' ? '建議類型：產品規劃與驗收。先確認要交付的成果，避免只重述原文。' : `${category.value === 'auto' ? '建議類型' : '已選類型'}：${CATEGORIES[selected].label}。可調整類型後查看對應補問。` : '輸入想法後，會建議適合的任務類型。';
   $('idea-error').textContent = '';
   if (useAI()) return;
   if (!questions.hidden) {
@@ -120,7 +127,7 @@ function renderHistory() {
     button.append(title, meta); button.addEventListener('click', () => {
       idea.value = item.idea || ''; category.value = item.category || 'auto'; depth.value = item.depth || 'balanced';
       previousIdea = idea.value; clearResult(); resetPlan();
-      if (useAI() && item.mode === 'ai' && item.plan) aiPlan = item.plan;
+      if (useAI() && item.mode === provider() && item.plan) aiPlan = item.plan;
       questions.hidden = false; renderQuestions(item.answers || {}); updateDetected();
       $('workbench').scrollIntoView({ behavior: 'smooth' }); idea.focus(); toast('已載入先前的想法');
     }); list.append(button);
@@ -129,7 +136,7 @@ function renderHistory() {
 function showResult(data) {
   result.value = data.text; result.hidden = false; $('empty-result').hidden = true; $('result-actions').hidden = false;
   $('result-status').textContent = '可以使用'; $('result-status').classList.add('ready');
-  $('result-length').textContent = `${data.text.length} 字元 · 已回答 ${data.filled}/${data.total} 題${data.mode === 'ai' ? ` · API ${aiCalls} 次 / ${aiTokens} tokens` : ''}`;
+  $('result-length').textContent = `${data.text.length} 字元 · 已回答 ${data.filled}/${data.total} 題${data.mode !== 'rules' ? ` · API ${aiCalls} 次 / ${aiTokens} tokens` : ''}`;
   $('missing-box').hidden = data.missing.length === 0;
   const list = $('missing-list'); list.replaceChildren();
   for (const item of data.missing.slice(0, 3)) { const li = document.createElement('li'); li.textContent = item; list.append(li); }
@@ -158,7 +165,7 @@ async function generate() {
   if (!useAI()) return generateLocal();
   if (busy) return;
   if (idea.value.trim().length < 2) { $('idea-error').textContent = '先寫下至少 2 個字的想法。'; idea.focus(); return; }
-  busy = true; $('generate').disabled = true; $('result-status').textContent = 'Gemini 分析中…';
+  busy = true; $('generate').disabled = true; $('ai-provider').disabled = true; $('result-status').textContent = `${providerName()} 分析中…`;
   try {
     if (!aiPlan) {
       const plan = await prepareAI();
@@ -172,18 +179,18 @@ async function generate() {
       $('result-status').textContent = '等待回答';
       return;
     }
-    $('result-status').textContent = 'Gemini 撰寫中…';
+    $('result-status').textContent = `${providerName()} 撰寫中…`;
     const reply = await api('generate', { ...requestData(), answers: aiPlan.questions.map(q => ({ question: q.label, answer: answers[q.id] })) });
-    showResult({ text: reply.text, category: selectedCategory(), filled: aiPlan.questions.length, total: aiPlan.questions.length, missing: [], mode: 'ai' });
+    showResult({ text: reply.text, category: selectedCategory(), filled: aiPlan.questions.length, total: aiPlan.questions.length, missing: [], mode: provider() });
     $('idea-error').textContent = '';
-    if ($('save-history').checked) saveHistory({ idea: idea.value.trim(), category: category.value, depth: depth.value, answers, plan: aiPlan, mode: 'ai', date: new Intl.DateTimeFormat('zh-TW', { month: '2-digit', day: '2-digit' }).format(new Date()) });
+    if ($('save-history').checked) saveHistory({ idea: idea.value.trim(), category: category.value, depth: depth.value, answers, plan: aiPlan, mode: provider(), date: new Intl.DateTimeFormat('zh-TW', { month: '2-digit', day: '2-digit' }).format(new Date()) });
     if (innerWidth < 721) $('result-panel').scrollIntoView({ behavior: 'smooth' });
-    toast('Gemini 已產生完整提示詞');
+    toast(`${providerName()} 已產生完整提示詞`);
   } catch (error) {
     $('idea-error').textContent = error.message;
     $('result-status').textContent = 'AI 暫時不可用';
-    toast('請重試，或取消勾選 Gemini 使用本機規則');
-  } finally { busy = false; $('generate').disabled = false; }
+    toast('請重試，或切換為本機規則');
+  } finally { busy = false; $('generate').disabled = false; $('ai-provider').disabled = false; }
 }
 
 function ideaChanged() {
@@ -196,7 +203,7 @@ function ideaChanged() {
 idea.addEventListener('input', ideaChanged);
 category.addEventListener('change', () => { clearResult(); resetPlan(); if (!questions.hidden) renderQuestions(); updateDetected(); });
 depth.addEventListener('change', () => { clearResult(); resetPlan(); if (!questions.hidden) renderQuestions(); });
-$('use-ai').addEventListener('change', () => { clearResult(); resetPlan(); if (!questions.hidden) renderQuestions(); updateDetected(); });
+$('ai-provider').addEventListener('change', () => { clearResult(); resetPlan(); if (!questions.hidden) renderQuestions(); updateDetected(); });
 function answerChanged() { clearResult(); $('idea-error').textContent = ''; }
 questions.addEventListener('input', answerChanged);
 questions.addEventListener('change', answerChanged);
@@ -204,9 +211,9 @@ $('show-questions').addEventListener('click', async () => {
   if (idea.value.trim().length < 2) { $('idea-error').textContent = '先寫下至少 2 個字的想法，再查看補問。'; idea.focus(); return; }
   if (useAI() && !aiPlan) {
     if (busy) return;
-    busy = true; $('show-questions').disabled = true; $('result-status').textContent = 'Gemini 分析中…';
+    busy = true; $('show-questions').disabled = true; $('ai-provider').disabled = true; $('result-status').textContent = `${providerName()} 分析中…`;
     try { await prepareAI(); } catch (error) { $('idea-error').textContent = error.message; $('result-status').textContent = 'AI 暫時不可用'; }
-    finally { busy = false; $('show-questions').disabled = false; }
+    finally { busy = false; $('show-questions').disabled = false; $('ai-provider').disabled = false; }
     return;
   }
   questions.hidden = !questions.hidden;

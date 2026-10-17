@@ -4,6 +4,7 @@ const root = new URL('.', import.meta.url);
 const files = {
   '/index.html': ['dist/index.html', 'text/html; charset=utf-8'],
   '/app.js': ['dist/app.js', 'text/javascript; charset=utf-8'],
+  '/ollama.js': ['dist/ollama.js', 'text/javascript; charset=utf-8'],
   '/core.js': ['dist/core.js', 'text/javascript; charset=utf-8'],
   '/styles.css': ['dist/styles.css', 'text/css; charset=utf-8']
 };

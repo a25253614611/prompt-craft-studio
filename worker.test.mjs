@@ -62,6 +62,7 @@ assert.equal(calls, 3);
 
 const homepage = await worker.fetch(new Request(url), env);
 assert.equal(homepage.status, 200);
-assert.match(await homepage.text(), /使用 Gemini 分析需求/);
+assert.match(await homepage.text(), /Ollama · 本機 AI/);
 assert.equal((await worker.fetch(new Request(`${url}/app.js`), env)).status, 200);
+assert.equal((await worker.fetch(new Request(`${url}/ollama.js`), env)).status, 200);
 console.log('Worker API checks passed.');
