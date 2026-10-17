@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f6f2ec">
+  <meta name="description" content="把一句簡單想法整理成清楚、可直接使用的完整提示詞。先回答關鍵問題，再複製成果。">
+  <title>提示詞工坊 · 從想法到好提示</title>
+  <link rel="stylesheet" href="./styles.css">
+  <script type="module" src="./app.js"></script>
+</head>
+<body>
+  <div class="page-shell">
+    <header class="site-header">
+      <a class="brand" href="#top" aria-label="提示詞工坊，回到頂部"><span class="brand-mark" aria-hidden="true">✳</span><span>提示詞工坊<small>PROMPT STUDIO</small></span></a>
+      <nav aria-label="主選單"><a href="#workbench">開始製作</a><a href="#how-it-works">使用方式</a><a href="#sources">設計依據</a></nav>
+      <span class="header-badge">無需登入 · 免費使用</span>
+    </header>
+
+    <main id="top">
+      <section class="hero" aria-labelledby="hero-title">
+        <div class="hero-copy">
+          <div class="eyebrow"><span class="eyebrow-star">✦</span> 讓想法說得更清楚</div>
+          <h1 id="hero-title">一句想法，<br><em>變成好提示。</em></h1>
+          <p>只要寫下你想做的事。工具會找出缺少的關鍵資訊、提出精簡問題，再整理成可直接貼給 AI 的完整提示詞。</p>
+          <a class="hero-cta" href="#workbench">開始製作 <span aria-hidden="true">↗</span></a>
+        </div>
+        <div class="hero-art" aria-hidden="true">
+          <div class="art-orbit art-orbit-one"></div><div class="art-orbit art-orbit-two"></div>
+          <div class="art-card art-card-input"><span class="art-label">你的想法</span><span>幫我寫一封合作邀請信</span><span class="art-cursor"></span></div>
+          <div class="art-spark">✳</div>
+          <div class="art-card art-card-output"><span class="art-label">整理後</span><span>目標 <b>·</b> 對象 <b>·</b> 語氣</span><span>背景 <b>·</b> 格式 <b>·</b> 品質</span></div>
+          <div class="art-corner">01 / IDEA → PROMPT</div>
+        </div>
+      </section>
+
+      <section class="steps" id="how-it-works" aria-label="使用方式">
+        <div><span>01</span><strong>寫下簡短想法</strong><p>一句話也可以，不必先學提示詞框架。</p></div>
+        <div><span>02</span><strong>回答關鍵問題</strong><p>依任務類型補上受眾、格式與限制。</p></div>
+        <div><span>03</span><strong>複製完整提示</strong><p>可編輯、下載，直接用於常見 AI 工具。</p></div>
+      </section>
+
+      <section class="workbench-section" id="workbench" aria-labelledby="workbench-title">
+        <div class="section-heading"><div><span class="section-kicker">WORKBENCH / 工作台</span><h2 id="workbench-title">把你的想法放進來</h2><p>從範例開始，或寫下自己的任務。</p></div><span class="section-note">你的內容只在此瀏覽器處理</span></div>
+        <div class="workbench-grid">
+          <div class="panel input-panel">
+            <div class="panel-title"><span class="step-number">1</span><div><h3>簡短提示詞</h3><p>先描述你想讓 AI 做什麼</p></div></div>
+            <label class="field-label" for="idea">你的想法 <span class="required">必填</span></label>
+            <textarea id="idea" rows="5" maxlength="4000" placeholder="例如：幫我寫一封給潛在合作夥伴的邀請信"></textarea>
+            <div class="field-meta"><span id="idea-error" class="error" role="alert"></span><span id="char-count">0 / 4000</span></div>
+            <div class="examples"><span>試試看：</span><button class="example-chip" data-example="幫我寫一封給潛在合作夥伴的邀請信">合作邀請信</button><button class="example-chip" data-example="幫我規劃一週的 Python 入門學習計畫">學習計畫</button><button class="example-chip" data-example="幫我分析客戶問卷結果並提出改善建議">問卷分析</button></div>
+
+            <div class="divider"></div>
+            <div class="panel-title compact"><span class="step-number">2</span><div><h3>設定方向</h3><p>讓補問更貼近你的任務</p></div></div>
+            <div class="settings-grid">
+              <label>任務類型<select id="category"><option value="auto">自動判斷</option><option value="general">一般任務</option><option value="writing">寫作與溝通</option><option value="learning">學習與教學</option><option value="research">研究與分析</option><option value="coding">程式與產品</option><option value="creative">創意與圖像</option></select></label>
+              <label>提示詞長度<select id="depth"><option value="balanced">標準 · 重點完整</option><option value="concise">精簡 · 快速使用</option><option value="detailed">詳細 · 更多規範</option></select></label>
+            </div>
+            <div class="detected" id="detected" aria-live="polite">輸入想法後，會建議適合的任務類型。</div>
+            <button class="secondary-button question-toggle" id="show-questions" type="button">查看補問 <span aria-hidden="true">↗</span></button>
+            <div id="questions" class="questions" hidden></div>
+            <div class="action-row"><button class="primary-button" id="generate" type="button">產生完整提示詞 <span aria-hidden="true">✦</span></button><button class="text-button" id="reset" type="button">清除重來</button></div>
+            <label class="history-optin"><input type="checkbox" id="save-history"> 在此瀏覽器保留最近使用紀錄</label>
+          </div>
+
+          <div class="panel output-panel" id="result-panel">
+            <div class="panel-title"><span class="step-number violet">3</span><div><h3>完整提示詞</h3><p>產生後可以直接修改與複製</p></div></div>
+            <div class="result-topline"><span id="result-status" class="status-pill">尚未產生</span><span id="result-length"></span></div>
+            <div id="empty-result" class="empty-result"><div class="empty-icon">✧</div><strong>清楚的提示，從這裡開始。</strong><p>寫下想法、回答補問，成果就會出現在這裡。</p><div class="empty-lines"><span></span><span></span><span></span></div></div>
+            <label class="sr-only" for="result">產生的提示詞，可直接編輯</label>
+            <textarea id="result" class="result-editor" spellcheck="false" hidden></textarea>
+            <div id="result-actions" class="result-actions" hidden><button class="primary-button copy-button" id="copy" type="button">複製提示詞</button><button class="secondary-button" id="download" type="button">下載 .md</button></div>
+            <div id="missing-box" class="missing-box" hidden><strong>還可以補充</strong><ul id="missing-list"></ul></div>
+            <div class="output-footnote">提示詞依你提供的內容整理；未填資訊不會被當成既定事實。</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="history-section" id="history-section" hidden><div class="section-heading small"><div><span class="section-kicker">RECENT / 最近使用</span><h2>繼續之前的想法</h2></div><button id="clear-history" class="text-button" type="button">清除紀錄</button></div><div id="history-list" class="history-list"></div><p class="history-note">紀錄僅儲存在這台裝置的瀏覽器。</p></section>
+
+      <section class="why-section" id="sources"><div class="why-heading"><span class="section-kicker">THE METHOD / 設計依據</span><h2>問對問題，<br>比堆疊形容詞更有用。</h2></div><div class="why-content"><p>工具會整理任務目標、必要背景、受眾、限制與輸出格式，再依情境補問。這些設計參考了提示工程指南與開放社群範例；產出的文字由本頁規則組合，不會呼叫模型。</p><div class="source-links"><a href="https://developers.openai.com/api/docs/guides/prompt-engineering" target="_blank" rel="noopener noreferrer">OpenAI 提示工程指南 ↗</a><a href="https://cloud.google.com/vertex-ai/generative-ai/docs/learn/prompts/prompt-design-strategies" target="_blank" rel="noopener noreferrer">Google Cloud 提示設計 ↗</a><a href="https://github.com/langgptai/wonderful-prompts" target="_blank" rel="noopener noreferrer">LangGPT 範例集 ↗</a><a href="https://github.com/outlookcat/prompt" target="_blank" rel="noopener noreferrer">提示詞資源索引 ↗</a><a href="https://github.com/OpenWorkai/codex-token-saver" target="_blank" rel="noopener noreferrer">Codex token 建議 ↗</a></div></div></section>
+    </main>
+    <footer><span>✳ 提示詞工坊</span><span>讓每個想法，都有清楚的起點。</span><a href="#top">回到頂部 ↑</a></footer>
+  </div>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+</body>
+</html>
