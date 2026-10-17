@@ -53,6 +53,9 @@ async function checkAI() {
   $('ai-provider').options[2].disabled = !aiAvailable;
   $('ai-provider').value = ollamaAvailable ? 'ollama' : aiAvailable ? 'gemini' : 'rules';
   $('ai-state').textContent = ollamaAvailable ? 'Ollama qwen3:4b 已就緒' : ollama.connected ? 'Ollama 缺少 qwen3:4b 模型' : aiAvailable ? 'Gemini 已就緒' : 'Ollama 未連線 · 使用規則';
+  $('ollama-help').hidden = ollamaAvailable;
+  $('local-link').hidden = location.hostname === '127.0.0.1';
+  $('ollama-help-text').textContent = ollama.connected ? '請先執行 ollama pull qwen3:4b，再重新整理。' : location.hostname === '127.0.0.1' ? '請啟動 Ollama，再重新整理。' : '本機 AI 請先雙擊 Git 專案中的「啟動本機網站.cmd」，並啟動 Ollama。';
   updateDetected();
 }
 function toast(message) {

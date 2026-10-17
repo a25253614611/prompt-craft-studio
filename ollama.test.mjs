@@ -10,6 +10,7 @@ globalThis.fetch = async (url, options) => {
   assert.equal(body.model, 'qwen3:4b');
   assert.equal(body.stream, false);
   assert.equal(body.think, false);
+  assert.equal(body.options.num_ctx, 8192);
   if (body.format === 'json') return Response.json({
     message: { content: JSON.stringify({ understanding: '整理目的尚未明確', questions: [
       { label: '使用哪種系統？', options: ['Windows', 'macOS'] },

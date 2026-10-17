@@ -28,14 +28,15 @@ function normalizePlan(text, idea) {
     label: clean(item?.label, 160),
     options: (Array.isArray(item?.options) ? item.options : []).slice(0, 6).map(option => clean(option, 60)).filter(Boolean)
   })).filter(item => item.label && !seen.has(item.label) && seen.add(item.label));
-  if (/整理.{0,5}電腦|電腦.{0,5}整理/.test(idea) && !/找|搜尋|空間|容量|分類|歸檔|備份|速度|變慢|卡頓|清理|刪除/.test(idea)) {
+  const ambiguousComputer = /整理.{0,5}電腦|電腦.{0,5}整理/.test(idea) && !/找|搜尋|空間|容量|分類|歸檔|備份|速度|變慢|卡頓|清理|刪除/.test(idea);
+  if (ambiguousComputer) {
     questions = [{
       id: 'q1', label: '這次整理電腦，最想先達成什麼？',
       options: ['尋找資料', '釋放空間', '分類檔案', '備份資料', '改善速度', '還不確定']
     }, ...questions.filter(item => !/目的|想達成|最想|哪一種/.test(item.label)).slice(0, 2)]
       .map((item, index) => ({ ...item, id: `q${index + 1}` }));
   }
-  return { understanding: clean(data.understanding, 280) || '請補充會改變做法的關鍵資訊。', questions };
+  return { understanding: ambiguousComputer ? '想整理電腦，但尚未確認真正目的。' : clean(data.understanding, 280) || '請補充會改變做法的關鍵資訊。', questions };
 }
 
 export async function ollamaApi(path, payload) {
@@ -63,7 +64,7 @@ export async function ollamaApi(path, payload) {
         stream: false,
         think: false,
         ...(path === 'plan' ? { format: 'json' } : {}),
-        options: { temperature: 0.2, num_predict: path === 'plan' ? 650 : input.depth === 'detailed' ? 1700 : 1100 }
+        options: { temperature: 0.2, num_ctx: 8192, num_predict: path === 'plan' ? 650 : input.depth === 'detailed' ? 1700 : 1100 }
       }),
       signal: AbortSignal.timeout(120000)
     });
