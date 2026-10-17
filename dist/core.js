@@ -209,7 +209,7 @@ export function composePrompt({ idea, category = 'auto', depth = 'balanced', ans
   const selected = category === 'auto' || !CATEGORIES[category] ? inferCategory(idea) : category;
   const normalized = Object.fromEntries(Object.entries(answers && typeof answers === 'object' ? answers : {}).map(([key, value]) => [key, clean(value).slice(0, 1000)]));
   const questions = getQuestions(selected, normalized, idea);
-  const required = questions.find(q => q.required && !normalized[q.id]);
+  const required = questions.find(q => q.required && (normalized[q.id].length < 2 || /^[ㄅ-ㄩˊˇˋ˙]+$/.test(normalized[q.id])));
   if (required) {
     const error = new Error(required.id === 'intent' ? '先選擇這次整理電腦的主要目的，再產生提示詞。' : `先回答「${required.label}」，再產生提示詞。`);
     error.code = 'CLARIFICATION_REQUIRED';

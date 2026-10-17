@@ -33,6 +33,7 @@ for (const [idea, questionId] of [
   assert.equal(getQuestions(inferCategory(idea), {}, idea).find(q => q.id === questionId).required, true);
 }
 const program = composePrompt({ idea: '我要一個程式', answers: { goal: '自動整理下載資料夾' } });
+assert.throws(() => composePrompt({ idea: '我要一個程式', answers: { goal: 'ㄍ' } }), error => error.questionId === 'goal');
 assert.match(program.text, /自動整理下載資料夾/);
 assert.match(program.text, /最小可用版本/);
 assert.match(program.text, /先提供預覽並避免覆蓋/);
