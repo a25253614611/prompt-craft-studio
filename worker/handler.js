@@ -17,6 +17,7 @@ const generateInstruction = `你是提示詞編輯，將使用者的簡短需求
 先從第一性原則判斷已確認的目的，再寫出具體執行步驟、應交付的成果和可檢查的條件。已回答的問題是事實，不要重問；保留原文中的具體功能、範圍、先後順序和限制。不要編造資料、來源、測試結果或意圖。
 最重要：產出必須是任務提示詞，不是給使用者的一串補問。資訊仍不足時，只列會改變做法的未解問題，最多使用輸入中的 remainingQuestionBudget 題；即使有問題，也要寫出取得答案後該如何完成任務。不要把「請先提供資訊」當作唯一交付成果。
 電腦整理若已回答「尋找資料」，目的就是找資料；步驟應包含安全搜尋及找不到時的下一步，不要轉成刪檔或泛泛整理。涉及刪除、覆蓋、搬移資料，要先列出影響並取得確認。產品驗證要逐項保留原文功能並提出可測試的驗收方式；若聲稱根據公開頁面卻沒有網址，標示來源待核對。
+不要假設另一個 AI 能直接讀取使用者電腦、網頁或檔案。沒有工具或授權時，應交付使用者可照做的步驟；只有實際取得資料並核對後，才能交付真實搜尋結果或檢查結論。不要要求高權限掃描作為預設做法。
 只回傳 JSON 物件，不要程式碼圍欄：{"objective":"明確、可執行的任務目標","steps":["具體步驟"],"deliverables":["實際成果及可檢查條件"],"questions":["若不問就會改變做法的未解問題"],"constraints":["必要限制"]}。steps 至少 2 項，deliverables 至少 1 項；questions 可以為空。不要在 steps 或 deliverables 中只寫問題。避免重複與空泛套話。`;
 
 function json(data, status = 200) {
@@ -116,12 +117,20 @@ function normalizeGenerated(text, input, answers) {
   const objective = clean(data?.objective, 400);
   const steps = items(data?.steps, 6);
   const deliverables = items(data?.deliverables, 4);
-  const questions = items(data?.questions, Math.max(0, 3 - answers.length));
+  let questions = items(data?.questions, Math.max(0, 3 - answers.length));
   const constraints = items(data?.constraints, 4);
   if (!objective || steps.length < 2 || !deliverables.length || steps.every(step => /^[請先]*[問提]/.test(step))) {
     throw new Error('Gemini 未產生可執行的提示詞。');
   }
   const known = [`原始需求：${input.idea}`, ...answers.map(item => `${item.question}：${item.answer}`)];
+  const findingData = /尋找資料|找資料|搜尋資料/.test(answers.map(item => item.answer).join(' ')) || /找不到|尋找|搜尋/.test(input.idea);
+  if (findingData && (input.category === 'computer' || /電腦|硬碟|檔案/.test(input.idea))) {
+    const details = known.join(' ');
+    questions = [
+      !/照片|圖片|文件|報告|影片|音樂|專案|下載|電子郵件|檔名|副檔名|類型|日期/.test(details) ? '你要找的資料有什麼線索（檔名、類型、日期或可能位置）？' : '',
+      !/Windows|macOS|Linux/i.test(details) ? '你使用 Windows、macOS 還是 Linux？' : ''
+    ].filter(Boolean).slice(0, Math.max(0, 3 - answers.length));
+  }
   const sections = [
     `# 任務\n${objective}`,
     `# 已知資訊\n${known.map(item => `- ${item}`).join('\n')}`,
@@ -129,9 +138,10 @@ function normalizeGenerated(text, input, answers) {
     `# 交付成果\n${deliverables.map(item => `- ${item}`).join('\n')}`
   ];
   if (questions.length) sections.push(`# 必要時先確認\n${questions.map((item, index) => `${index + 1}. ${item}`).join('\n')}\n取得答案後繼續完成上述成果，不要只停在補問。`);
-  const safeguards = [...constraints];
+  const safeguards = findingData ? [] : [...constraints];
   if (input.category === 'computer' || /整理.{0,5}電腦|電腦.{0,5}整理/.test(input.idea)) {
     safeguards.push('未經我確認，不要刪除、搬移或覆蓋任何資料；不要假裝已檢查我的電腦。');
+    safeguards.push('若沒有檔案存取工具或授權，只提供可照做的搜尋與核對步驟；取得實際結果後才能列出真實檔案清單。');
   }
   safeguards.push('使用繁體中文；無法查證的資訊標為待確認，不要捏造結果。');
   sections.push(`# 限制\n${safeguards.map(item => `- ${item}`).join('\n')}`);
